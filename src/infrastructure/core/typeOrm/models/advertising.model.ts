@@ -11,6 +11,7 @@ import {
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 import { AdvertisingDayStatisticModel } from '@/infrastructure/core/typeOrm/models/advertisingDayStatistic.model';
+import { AdvertisingCostHistoryModel } from '@/infrastructure/core/typeOrm/models/advestingCostHistory.model';
 
 export enum AdvertisingTypes {
   ON_CATALOG = 4,
@@ -60,6 +61,10 @@ export class AdvertisingModel {
 
   @OneToMany(() => AdvertisingDayStatisticModel, day => day.advertising)
   dailyStatistics: Array<AdvertisingDayStatisticModel>;
+
+  @OneToMany(() => AdvertisingCostHistoryModel, history => history.advertising, { cascade: true })
+  costHistory: Array<AdvertisingCostHistoryModel>;
+
 
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;

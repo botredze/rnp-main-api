@@ -17,6 +17,7 @@ import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/a
 import { AdvertisingDayStatisticModel } from '@/infrastructure/core/typeOrm/models/advertisingDayStatistic.model';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adverstingDayApps.model';
+import { AdvertisingCostHistoryModel } from '@/infrastructure/core/typeOrm/models/advestingCostHistory.model';
 
 @Module({
   imports: [
@@ -56,7 +57,8 @@ import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adv
             AdvertisingDayAppNmModel,
             AdvertisingDayStatisticModel,
             AdvertisingModel,
-            AdvertisingDayAppModel
+            AdvertisingDayAppModel,
+            AdvertisingCostHistoryModel
           ],
           synchronize: true ,
           logging: dbDebug,

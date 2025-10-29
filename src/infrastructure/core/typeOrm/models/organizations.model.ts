@@ -12,6 +12,14 @@ import { UserModel } from '@/infrastructure/core/typeOrm/models/user.model';
 import { StocksModel } from '@/infrastructure/core/typeOrm/models/stocks.model';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 
+export enum OrganizationStatuses {
+  Inited = 'inited',
+  Active = 'active',
+  Inactive = 'inactive',
+  Deleted = 'deleted',
+  Paused = 'paused',
+  errorApiKey = 'errorApiKey'
+}
 
 @Entity({name: 'organization'})
 export class OrganizationsModel {
@@ -21,8 +29,14 @@ export class OrganizationsModel {
   @Column({name: "organization_name"})
   organizationName: string;
 
+  @Column({name: "wb_organization_name", nullable: true})
+  wbOrganizationName: string;
+
   @Column({name: "api_key"})
   apiKey: string;
+
+  @Column({name: 'sid', nullable: true})
+  sid: string;
 
   @Column({name: 'created_date', type: 'timestamp'})
   createdDate: Date;
@@ -32,6 +46,9 @@ export class OrganizationsModel {
 
   @Column({name: 'payment_date', type: 'timestamp'})
   paymentDate: Date;
+
+  @Column({name: 'status', type: 'enum', enum: OrganizationStatuses, default: OrganizationStatuses.Inited})
+  status: OrganizationStatuses;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;

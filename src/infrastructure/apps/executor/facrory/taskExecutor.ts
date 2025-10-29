@@ -1,3 +1,3 @@
 export abstract class TaskExecutor {
-  abstract execute(): Promise<void>;
+  abstract execute(...args: Array<any>): Promise<void>;
 }
