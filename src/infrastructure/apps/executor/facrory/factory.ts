@@ -11,8 +11,8 @@ export class TaskExecutorFactory {
 
   create(taskName: TaskName): TaskExecutor {
     switch (taskName) {
-      // case 'image-service-images-drop-executor':
-      //   return new ImageServiceImagesDropExecutor(this.imageService, this.imageServiceImagesRepository);
+      // case TaskName.OrganizationInitExecutor:
+      //   return 'hui'
       default:
         throw new Error(`No executor found for task: ${taskName}`);
     }

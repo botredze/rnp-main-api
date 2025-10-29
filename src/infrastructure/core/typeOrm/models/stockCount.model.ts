@@ -1,10 +1,5 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 
 @Entity({ name: 'stock_counts' })
 export class StockCountModel {
@@ -32,6 +27,9 @@ export class StockCountModel {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @ManyToOne(() => ProductsModel, product => product.stockCounts)
+  product: ProductsModel;
 
   constructor(params: Partial<StockCountModel> = {}) {
     Object.assign(this, params);

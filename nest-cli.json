@@ -15,8 +15,7 @@
       "sourceRoot": "src/infrastructure/apps/main",
       "entryFile": "infrastructure/apps/main/main",
       "compilerOptions": {
-        "builder": "tsc",
-        "tsConfigPath": "src/infrastructure/apps/main/tsconfig.app.json"
+        "builder": "tsc"
       }
     },
     "scheduler": {
@@ -25,8 +24,7 @@
       "sourceRoot": "src/infrastructure/apps/scheduler",
       "entryFile": "infrastructure/apps/scheduler/main",
       "compilerOptions": {
-        "builder": "tsc",
-        "tsConfigPath": "src/infrastructure/apps/scheduler/tsconfig.app.json"
+        "builder": "tsc"
       }
     },
     "executor": {
@@ -35,8 +33,7 @@
       "sourceRoot": "src/infrastructure/apps/executor",
       "entryFile": "infrastructure/apps/executor/main",
       "compilerOptions": {
-        "builder": "tsc",
-        "tsConfigPath": "src/infrastructure/apps/executor/tsconfig.app.json"
+        "builder": "tsc"
       }
     }
   }

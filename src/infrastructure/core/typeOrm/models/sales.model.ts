@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 
 @Entity({name: 'sales'})
 export class SalesModel {
@@ -50,6 +51,9 @@ export class SalesModel {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @ManyToOne(() => ProductsModel, product => product.sales)
+  product: ProductsModel;
 
   constructor(params: Partial<SalesModel> = {}) {
     Object.assign(this, params);

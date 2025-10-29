@@ -2,9 +2,21 @@ import {
   CreateDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  Column
+  Column,
+  ManyToOne,
+  OneToMany,
+  Entity,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
+import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
+import { OrderModel } from '@/infrastructure/core/typeOrm/models/order.model';
+import { SalesModel } from '@/infrastructure/core/typeOrm/models/sales.model';
+import { HistoryModel } from '@/infrastructure/core/typeOrm/models/history.model';
+import { StockCountModel } from '@/infrastructure/core/typeOrm/models/stockCount.model';
+import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 
+@Entity({name: 'products'})
 export class ProductsModel {
 
   @PrimaryGeneratedColumn({ name: 'id' })
@@ -42,6 +54,25 @@ export class ProductsModel {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @ManyToOne(() => OrganizationsModel, org => org.products)
+  organization: OrganizationsModel;
+
+  @OneToMany(() => OrderModel, order => order.product)
+  orders: Array<OrderModel>;
+
+  @OneToMany(() => SalesModel, sale => sale.product)
+  sales: Array<SalesModel>;
+
+  @OneToMany(() => HistoryModel, history => history.product)
+  histories: Array<HistoryModel>;
+
+  @OneToMany(() => StockCountModel, stock => stock.product)
+  stockCounts: Array<StockCountModel>;
+
+  @ManyToMany(() => AdvertisingModel, ad => ad.products)
+  @JoinTable({ name: 'product_advertising' })
+  advertisements: Array<AdvertisingModel>;
 
   constructor(params: Partial<ProductsModel> = {}) {
     Object.assign(this, params);
