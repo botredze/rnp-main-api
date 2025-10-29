@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src/infrastructure",
+  "entryFile": "infrastructure/apps/main/main",
+  "compilerOptions": {
+    "builder": "tsc",
+    "deleteOutDir": true
+  },
+  "monorepo": true,
+  "projects": {
+    "main": {
+      "type": "application",
+      "root": "src/infrastructure/apps/main",
+      "sourceRoot": "src/infrastructure/apps/main",
+      "entryFile": "infrastructure/apps/main/main",
+      "compilerOptions": {
+        "builder": "tsc",
+        "tsConfigPath": "src/infrastructure/apps/main/tsconfig.app.json"
+      }
+    },
+    "scheduler": {
+      "type": "application",
+      "root": "src/infrastructure/apps/scheduler",
+      "sourceRoot": "src/infrastructure/apps/scheduler",
+      "entryFile": "infrastructure/apps/scheduler/main",
+      "compilerOptions": {
+        "builder": "tsc",
+        "tsConfigPath": "src/infrastructure/apps/scheduler/tsconfig.app.json"
+      }
+    },
+    "executor": {
+      "type": "application",
+      "root": "src/infrastructure/apps/executor",
+      "sourceRoot": "src/infrastructure/apps/executor",
+      "entryFile": "infrastructure/apps/executor/main",
+      "compilerOptions": {
+        "builder": "tsc",
+        "tsConfigPath": "src/infrastructure/apps/executor/tsconfig.app.json"
+      }
+    }
+  }
+}
