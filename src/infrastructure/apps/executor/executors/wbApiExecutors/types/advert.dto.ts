@@ -52,3 +52,86 @@ export interface IAdvertAutoParams {
 }
 
 export type IAdvertInfoDetailsArray = Array<IAdvertInfoDetails>;
+
+
+interface Nm {
+  atbs: number;
+  canceled: number;
+  clicks: number;
+  cpc: number;
+  cr: number;
+  ctr: number;
+  name: string;
+  nmId: number;
+  orders: number;
+  shks: number;
+  sum: number;
+  sum_price: number;
+  views: number;
+}
+
+interface App {
+  appType: number;
+  atbs: number;
+  canceled: number;
+  clicks: number;
+  cpc: number;
+  cr: number;
+  ctr: number;
+  nms: Array<Nm>;
+  orders: number;
+  shks: number;
+  sum: number;
+  sum_price: number;
+  views: number;
+}
+
+interface Day {
+  apps: Array<App>;
+  atbs: number;
+  canceled: number;
+  clicks: number;
+  cpc: number;
+  cr: number;
+  ctr: number;
+  date: string; // ISO string
+  orders: number;
+  shks: number;
+  sum: number;
+  sum_price: number;
+  views: number;
+}
+
+interface BoosterStat {
+  avg_position: number;
+  date: string; // ISO string
+  nm: number;
+}
+
+export interface AdvertStats {
+  advertId: number;
+  atbs: number;
+  canceled: number;
+  clicks: number;
+  cpc: number;
+  cr: number;
+  ctr: number;
+  boosterStats?: Array<BoosterStat>;
+  days: Array<Day>;
+  orders: number;
+  shks: number;
+  sum: number;
+  sum_price: number;
+  views: number;
+}
+
+export interface AdvertPayHistory {
+  updNum: number;                 // номер обновления
+  updTime: string;                // время обновления в ISO формате
+  updSum: number;                 // сумма обновления
+  advertId: number;               // ID объявления
+  campName: string;               // название кампании
+  advertType: number;             // тип объявления (числовой код)
+  paymentType: string;            // способ оплаты
+  advertStatus: number;           // статус объявления (числовой код)
+}

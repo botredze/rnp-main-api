@@ -1,6 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+  BeforeInsert,
+  BeforeUpdate,
+  JoinColumn,
+} from 'typeorm';
 import { AdvertisingDayStatisticModel } from './advertisingDayStatistic.model';
-import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms..mode';
+import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms.model';
 
 export enum AppTypes {
   SITE = 1,
@@ -47,7 +58,11 @@ export class AdvertisingDayAppModel {
   views: number;
 
   @ManyToOne(() => AdvertisingDayStatisticModel, day => day.apps)
+  @JoinColumn({name: 'day_statistic_id'})
   dayStatistic: AdvertisingDayStatisticModel;
+
+  @Column({name: 'day_statistic_id'})
+  dayStatisticId: number;
 
   @OneToMany(() => AdvertisingDayAppNmModel, nm => nm.appStatistic, { cascade: true })
   nms: Array<AdvertisingDayAppNmModel>;
@@ -57,6 +72,18 @@ export class AdvertisingDayAppModel {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    this.createdAt = new Date();
+    this.updatedAt = new Date();
+  }
+
+  @BeforeUpdate()
+  setTimestampsOnUpdate() {
+    this.updatedAt = new Date();
+  }
+
 
   constructor(params: Partial<AdvertisingDayAppModel> = {}) {
     Object.assign(this, params);

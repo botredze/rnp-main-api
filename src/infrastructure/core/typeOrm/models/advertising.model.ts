@@ -6,7 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
-  ManyToMany, BeforeInsert, BeforeUpdate,
+  ManyToMany,
+  BeforeInsert,
+  BeforeUpdate,
+  JoinColumn,
 } from 'typeorm';
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
@@ -60,7 +63,11 @@ export class AdvertisingModel {
   autoParams?: string;
 
   @ManyToOne(() => OrganizationsModel, org => org.advertisements)
+  @JoinColumn({ name: 'organization_id' })
   organization?: OrganizationsModel;
+
+  @Column({ name: 'organization_id' })
+  organizationId: number;
 
   @ManyToMany(() => ProductsModel, product => product.advertisements)
   products?: Array<ProductsModel>;
@@ -70,7 +77,6 @@ export class AdvertisingModel {
 
   @OneToMany(() => AdvertisingCostHistoryModel, history => history.advertising, { cascade: true })
   costHistory?: Array<AdvertisingCostHistoryModel>;
-
 
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;

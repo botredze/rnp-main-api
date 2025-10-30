@@ -5,10 +5,10 @@ import {
   IAdvertInfoDetails,
   IAdvertInfoDetailsArray,
 } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/advert.dto';
-import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advertInfo.reposiroty';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 import { stringifyJson } from '@/infrastructure/apps/scheduler/heplers/json.helper';
 import { DeepPartial } from 'typeorm';
+import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advestingInfo.repository';
 
 
 export class GetAdvertingListExecutor extends TaskExecutor {
@@ -40,7 +40,7 @@ export class GetAdvertingListExecutor extends TaskExecutor {
     });
   }
 
-  async execute(apiKey: string) : Promise<void>{
+  async execute(apiKey: string, organizationId: number) : Promise<void>{
     this.#initAxios(apiKey);
     try {
       const advertListResponse = await this.#axiosService.get(this.#advertList)
@@ -72,13 +72,14 @@ export class GetAdvertingListExecutor extends TaskExecutor {
                 status:  advertInfoDetail.status,
                 type: advertInfoDetail.status,
                 dailyBudget: advertInfoDetail.dailyBudget,
-                autoParams: stringifyJson(advertInfoDetail.autoParams)
+                autoParams: stringifyJson(advertInfoDetail.autoParams),
+                organizationId
               }
 
               if(existingAdvert) {
                 await this.#advertingInfoRepository.updateById(existingAdvert.id, payload)
               }else {
-                await this.#advertingInfoRepository.create( payload)
+                await this.#advertingInfoRepository.create(payload)
               }
             }
           }

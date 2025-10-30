@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm';
 import { ProductsModel } from './products.model';
 import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adverstingDayApps.model';
 
@@ -41,16 +51,36 @@ export class AdvertisingDayAppNmModel {
   views: number;
 
   @ManyToOne(() => AdvertisingDayAppModel, app => app.nms)
+  @JoinColumn({name: 'app_statistic_id'})
   appStatistic: AdvertisingDayAppModel;
 
+  @Column({name: 'app_statistic_id'})
+  appStatisticId: number;
+
   @ManyToOne(() => ProductsModel)
+  @JoinColumn({name: 'product_id'})
   product: ProductsModel;
+
+  @Column({name: 'product_id'})
+  productId: number;
 
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    this.createdAt = new Date();
+    this.updatedAt = new Date();
+  }
+
+  @BeforeUpdate()
+  setTimestampsOnUpdate() {
+    this.updatedAt = new Date();
+  }
+
 
   constructor(params: Partial<AdvertisingDayAppNmModel> = {}) {
     Object.assign(this, params);
