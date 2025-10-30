@@ -3,6 +3,7 @@ import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecuto
 import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/stocks.repository';
 import { StocksDtoArray } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/stocks.dto';
 import { StocksModel } from '@/infrastructure/core/typeOrm/models/stocks.model';
+import { DeepPartial } from 'typeorm';
 
 
 export class GetStocksExecutor extends TaskExecutor{
@@ -48,7 +49,7 @@ export class GetStocksExecutor extends TaskExecutor{
 
         const existingStock = await this.#stockRepository.findOne({where: {stockId: stock.id}})
 
-        const payload: StocksModel = {
+        const payload: DeepPartial<StocksModel> = {
           stockId: stock.id,
           officeId: stock.officeId,
           deliveryType: stock.deliveryType,

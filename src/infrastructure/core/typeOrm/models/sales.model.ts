@@ -1,11 +1,19 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  BeforeInsert, BeforeUpdate,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 
 @Entity({name: 'sales'})
 export class SalesModel {
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
-
 
   @Column({ type: 'timestamp', name: 'date' })
   date: Date;
@@ -22,7 +30,7 @@ export class SalesModel {
   @Column({ name: 'is_realization' })
   isRealization: boolean;
 
-  @Column({ type: 'decimal', name: 'total_price' })
+  @Column({ type: 'decimal', precision: 10, scale: 2, name: 'total_price' })
   totalPrice: number;
 
   @Column({ type: 'decimal', name: 'discount_percent', nullable: true })
@@ -46,14 +54,66 @@ export class SalesModel {
   @Column({ type: 'timestamp', name: 'cancel_date', nullable: true })
   cancelDate: Date;
 
+  @ManyToOne(() => ProductsModel, product => product.sales)
+  @JoinColumn({name: 'product_id'})
+  product: ProductsModel;
+
+  @Column({ name: 'product_id' })
+  productId: number;
+
+  @Column({ name: 'sale_id' })
+  saleID: string;
+
+  @Column({ name: 'warehouse_name', nullable: true })
+  warehouseName: string;
+
+  @Column({ name: 'warehouse_type', nullable: true })
+  warehouseType: string;
+
+  @Column({ name: 'country_name', nullable: true })
+  countryName: string;
+
+  @Column({ name: 'region_name', nullable: true })
+  regionName: string;
+
+  @Column({ name: 'supplier_article', nullable: true })
+  supplierArticle: string;
+
+  @Column({ name: 'barcode', nullable: true })
+  barcode: string;
+
+  @Column({ name: 'income_id', type: 'bigint', nullable: true })
+  incomeId: number;
+
+  @Column({ name: 'spp', type: 'decimal', nullable: true })
+  spp: number;
+
+  @Column({ name: 'sticker', nullable: true })
+  sticker: string;
+
+  @Column({ name: 'g_number', nullable: true })
+  gNumber: string;
+
+  @Column({ name: 'srid', nullable: true })
+  srid: string;
+
+
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @ManyToOne(() => ProductsModel, product => product.sales)
-  product: ProductsModel;
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    this.createdAt = new Date();
+    this.updatedAt = new Date();
+  }
+
+  @BeforeUpdate()
+  setTimestampsOnUpdate() {
+    this.updatedAt = new Date();
+  }
 
   constructor(params: Partial<SalesModel> = {}) {
     Object.assign(this, params);

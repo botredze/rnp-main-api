@@ -38,12 +38,6 @@ export class StocksModel {
   @Column({name: 'stock_name'})
   stockName: string;
 
-  @UpdateDateColumn({ name: "updated_at" })
-  updatedAt: Date;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
   @ManyToOne(() => OrganizationsModel, org => org.stocks)
   @JoinColumn({ name: 'organization_id' })
   organization: OrganizationsModel;
@@ -51,6 +45,11 @@ export class StocksModel {
   @Column({ name: 'organization_id' })
   organizationId: number;
 
+  @UpdateDateColumn({ name: "updated_at" })
+  updatedAt: Date;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
   @BeforeInsert()
   setTimestampsOnInsert() {

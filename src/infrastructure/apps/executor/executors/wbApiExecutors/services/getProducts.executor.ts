@@ -117,7 +117,7 @@ export class GetProductsExecutor extends TaskExecutor {
             photos: stringifyJson(cart.photos),
             organizationId
           }
-          const result = await this.#productRepository.create(newProductPayload)
+         await this.#productRepository.create(newProductPayload)
         }
       }
 

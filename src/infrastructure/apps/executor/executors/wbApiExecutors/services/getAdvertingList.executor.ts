@@ -8,6 +8,7 @@ import {
 import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advertInfo.reposiroty';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 import { stringifyJson } from '@/infrastructure/apps/scheduler/heplers/json.helper';
+import { DeepPartial } from 'typeorm';
 
 
 export class GetAdvertingListExecutor extends TaskExecutor {
@@ -63,7 +64,7 @@ export class GetAdvertingListExecutor extends TaskExecutor {
             for (const advertInfoDetail of advertInfoDetails) {
               const existingAdvert = await  this.#advertingInfoRepository.findOne({where: {advertId: advertInfoDetail.advertId}})
 
-              const payload: AdvertisingModel = {
+              const payload: DeepPartial<AdvertisingModel> = {
                 advertId: advertInfoDetail.advertId,
                 advertName: advertInfoDetail.name,
                 startTime: advertInfoDetail.startTime,
