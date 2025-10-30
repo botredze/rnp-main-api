@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
-  ManyToMany,
+  ManyToMany, BeforeInsert, BeforeUpdate,
 } from 'typeorm';
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
@@ -33,19 +33,19 @@ export enum AdvertisingStatuses {
 @Entity({ name: 'advertising' })
 export class AdvertisingModel {
   @PrimaryGeneratedColumn({ name: 'id' })
-  id: number;
+  id?: number;
 
   @Column({ name: 'advert_id' })
-  advertId: string;
+  advertId: number;
 
   @Column({ name: 'advert_name' })
   advertName: string;
 
   @Column({ name: 'start_time', type: 'timestamp' })
-  startTime: Date;
+  startTime: string;
 
   @Column({ name: 'end_time', type: 'timestamp' })
-  endTime: Date;
+  endTime: string;
 
   @Column({ name: 'status' })
   status: number;
@@ -53,17 +53,23 @@ export class AdvertisingModel {
   @Column({ name: 'type' })
   type: number;
 
+  @Column({ name: 'daily_budget' })
+  dailyBudget: number
+
+  @Column({ name: 'auto_params', type: 'json', nullable: true })
+  autoParams?: string;
+
   @ManyToOne(() => OrganizationsModel, org => org.advertisements)
-  organization: OrganizationsModel;
+  organization?: OrganizationsModel;
 
   @ManyToMany(() => ProductsModel, product => product.advertisements)
-  products: Array<ProductsModel>;
+  products?: Array<ProductsModel>;
 
   @OneToMany(() => AdvertisingDayStatisticModel, day => day.advertising)
-  dailyStatistics: Array<AdvertisingDayStatisticModel>;
+  dailyStatistics?: Array<AdvertisingDayStatisticModel>;
 
   @OneToMany(() => AdvertisingCostHistoryModel, history => history.advertising, { cascade: true })
-  costHistory: Array<AdvertisingCostHistoryModel>;
+  costHistory?: Array<AdvertisingCostHistoryModel>;
 
 
   @UpdateDateColumn({ name: "updated_at" })
@@ -71,6 +77,18 @@ export class AdvertisingModel {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    this.createdAt = new Date();
+    this.updatedAt = new Date();
+  }
+
+  @BeforeUpdate()
+  setTimestampsOnUpdate() {
+    this.updatedAt = new Date();
+  }
+
 
   constructor(params: Partial<AdvertisingModel> = {}) {
     Object.assign(this, params);

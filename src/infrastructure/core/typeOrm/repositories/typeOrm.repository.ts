@@ -10,7 +10,7 @@ import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity
 type EntityInput<T> = DeepPartial<T> | Partial<T>;
 
 
-export abstract class TypeOrmRepository<T extends { id: number }> {
+export abstract class TypeOrmRepository<T extends { id?: number }> {
   protected readonly repository: Repository<T>;
 
   constructor(repository: Repository<T>) {
@@ -69,7 +69,7 @@ export abstract class TypeOrmRepository<T extends { id: number }> {
     });
   }
 
-  async updateById(id: number, data: Partial<T>): Promise<T | null> {
+  async updateById(id: number, data: DeepPartial<T>): Promise<T | null> {
     await this.repository.update(
       { id } as FindOptionsWhere<T>,
       data as QueryDeepPartialEntity<T>,
@@ -87,7 +87,7 @@ export abstract class TypeOrmRepository<T extends { id: number }> {
     return this.repository.exist({ where, withDeleted });
   }
 
-  async create(data: Partial<T>, relations?: string[]): Promise<T> {
+  async create(data: DeepPartial<T>, relations?: Array<string>): Promise<T> {
     const entity = this.repository.create(data as any as DeepPartial<T>);
 
     const saved = await this.repository.save(entity as any as DeepPartial<T>);

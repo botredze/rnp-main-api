@@ -8,6 +8,9 @@ import {
   Entity,
   ManyToMany,
   JoinTable,
+  JoinColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
 import { OrderModel } from '@/infrastructure/core/typeOrm/models/order.model';
@@ -20,10 +23,10 @@ import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertisi
 export class ProductsModel {
 
   @PrimaryGeneratedColumn({ name: 'id' })
-  id: number;
+  id?: number;
 
   @Column({ name: 'nmID' })
-  nmID: string;
+  nmID: number;
 
   @Column({ name: 'sku' })
   sku: string;
@@ -49,33 +52,49 @@ export class ProductsModel {
   @Column({ type: 'json', name: 'photos', nullable: true })
   photos: any;
 
+  @ManyToOne(() => OrganizationsModel, org => org.products)
+  @JoinColumn({ name: 'organization_id' })
+  organization?: OrganizationsModel;
+
+  @Column({ name: 'organization_id' })
+  organizationId: number;
+
+  @OneToMany(() => OrderModel, order => order.product)
+  orders?: Array<OrderModel>;
+
+  @OneToMany(() => SalesModel, sale => sale.product)
+  sales?: Array<SalesModel>;
+
+  @OneToMany(() => HistoryModel, history => history.product)
+  histories?: Array<HistoryModel>;
+
+  @OneToMany(() => StockCountModel, stock => stock.product)
+  stockCounts?: Array<StockCountModel>;
+
+  @ManyToMany(() => AdvertisingModel, ad => ad.products)
+  @JoinTable({ name: 'product_advertising' })
+  advertisements?: Array<AdvertisingModel>;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @ManyToOne(() => OrganizationsModel, org => org.products)
-  organization: OrganizationsModel;
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    this.createdAt = new Date();
+    this.updatedAt = new Date();
+  }
 
-  @OneToMany(() => OrderModel, order => order.product)
-  orders: Array<OrderModel>;
-
-  @OneToMany(() => SalesModel, sale => sale.product)
-  sales: Array<SalesModel>;
-
-  @OneToMany(() => HistoryModel, history => history.product)
-  histories: Array<HistoryModel>;
-
-  @OneToMany(() => StockCountModel, stock => stock.product)
-  stockCounts: Array<StockCountModel>;
-
-  @ManyToMany(() => AdvertisingModel, ad => ad.products)
-  @JoinTable({ name: 'product_advertising' })
-  advertisements: Array<AdvertisingModel>;
+  @BeforeUpdate()
+  setTimestampsOnUpdate() {
+    this.updatedAt = new Date();
+  }
 
   constructor(params: Partial<ProductsModel> = {}) {
     Object.assign(this, params);
   }
+
 
 }

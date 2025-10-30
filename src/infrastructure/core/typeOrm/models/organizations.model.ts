@@ -38,6 +38,9 @@ export class OrganizationsModel {
   @Column({name: 'sid', nullable: true})
   sid: string;
 
+  @Column({name: 'trade_mark', nullable: true})
+  tradeMark: string;
+  
   @Column({name: 'created_date', type: 'timestamp'})
   createdDate: Date;
 
