@@ -13,11 +13,11 @@ import { SalesModel } from '@/infrastructure/core/typeOrm/models/sales.model';
 import { HistoryModel } from '@/infrastructure/core/typeOrm/models/history.model';
 import { StockCountModel } from '@/infrastructure/core/typeOrm/models/stockCount.model';
 import { StocksModel } from '@/infrastructure/core/typeOrm/models/stocks.model';
-import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms..mode';
 import { AdvertisingDayStatisticModel } from '@/infrastructure/core/typeOrm/models/advertisingDayStatistic.model';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adverstingDayApps.model';
 import { AdvertisingCostHistoryModel } from '@/infrastructure/core/typeOrm/models/advestingCostHistory.model';
+import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms.model';
 
 @Module({
   imports: [

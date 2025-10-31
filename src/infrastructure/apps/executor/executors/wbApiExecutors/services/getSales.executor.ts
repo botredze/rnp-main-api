@@ -19,9 +19,14 @@ export class GetSalesExecutor extends TaskExecutor {
   readonly #productRepository: ProductRepository;
   readonly #salesRepository: SalesRepository;
 
-  constructor() {
+  constructor(
+    productRepository: ProductRepository,
+    salesRepository: SalesRepository,
+  ) {
     super();
     this.#axiosService = axios.create();
+    this.#productRepository = productRepository;
+    this.#salesRepository = salesRepository;
   }
 
   #initAxios(apiKey: string) {

@@ -28,6 +28,7 @@ export class GetStockReportExecutor extends TaskExecutor {
     this.#initAxios(apiKey);
 
     try {
+      const getStockReportResponse = await this.#axiosService.get(this.#baseUrl)
 
     }catch (error) {
       console.log(error, 'error');
