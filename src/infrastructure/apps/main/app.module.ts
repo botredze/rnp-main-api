@@ -1,9 +1,8 @@
-import { Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
-import path from 'node:path';
 import * as env from '@/infrastructure/core/config/env';
 import { UserModel } from '@/infrastructure/core/typeOrm/models/user.model';
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
@@ -18,6 +17,7 @@ import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertisi
 import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adverstingDayApps.model';
 import { AdvertisingCostHistoryModel } from '@/infrastructure/core/typeOrm/models/advestingCostHistory.model';
 import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms.model';
+import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProducts.model';
 
 @Module({
   imports: [
@@ -58,9 +58,10 @@ import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/a
             AdvertisingDayStatisticModel,
             AdvertisingModel,
             AdvertisingDayAppModel,
-            AdvertisingCostHistoryModel
+            AdvertisingCostHistoryModel,
+            UnitEconomicProductsModel,
           ],
-          synchronize: true ,
+          synchronize: true,
           logging: dbDebug,
         };
 
@@ -79,6 +80,4 @@ import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/a
   controllers: [],
   providers: [],
 })
-export class AppModule {
-
-}
+export class AppModule {}
