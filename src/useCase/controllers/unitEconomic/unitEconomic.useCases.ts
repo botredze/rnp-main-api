@@ -4,7 +4,7 @@ import { UnitEconomicProductMetricsRepository } from '@/infrastructure/core/type
 import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProducts.model';
 import { UnitEconomicProductMetricsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProductMetrics.model';
 
-export class UnitEconomicController {
+export class UnitEconomicUseCase {
   readonly #unitEconomicProductRepository: UnitEconomicProductRepository;
   readonly #unitEconomicProductMetricsRepository: UnitEconomicProductMetricsRepository;
 
@@ -16,7 +16,7 @@ export class UnitEconomicController {
     this.#unitEconomicProductMetricsRepository = unitEconomicProductMetricsRepository;
   }
 
-  async getList(query: UnitEconomicGetQueryDto): Promise<any> {
+  async getList(query: UnitEconomicGetQueryDto): Promise<Array<UnitEconomicProductsModel>> {
     const { organizationId } = query;
 
     const products = await this.#unitEconomicProductRepository.findMany({ where: { organizationId } });
@@ -28,12 +28,12 @@ export class UnitEconomicController {
     return products;
   }
 
-  async getById(query: UnitEconomicGetQueryDto): Promise<any> {
+  async getById(query: UnitEconomicGetQueryDto): Promise<UnitEconomicProductsModel> {
     const { productId } = query;
 
     const product = await this.#unitEconomicProductRepository.findOne({
       where: { id: productId },
-      relations: ['unit_economic_product_metrics'],
+      relations: ['tableData'],
     });
 
     if (!product) {
@@ -44,7 +44,10 @@ export class UnitEconomicController {
   }
 
   async create(query: UnitEconomicCreateDto): Promise<any> {
-    const { organizationId, metrics } = query;
+    console.log(query, 'query');
+    const { organizationId, tableData } = query;
+
+    console.log(organizationId, 'organizationId');
 
     const createPayload = new UnitEconomicProductsModel({
       productName: query.productName,
@@ -52,6 +55,7 @@ export class UnitEconomicController {
       price: query.price,
       salePrice: query.salePrice,
       ssp: query.ssp,
+      wbDiscount: query.wbDiscount,
       priceWithSpp: query.priceWithSpp,
       priceWithWbDiscount: query.priceWithWbDiscount,
       organizationId,
@@ -59,7 +63,7 @@ export class UnitEconomicController {
     const createdProduct = await this.#unitEconomicProductRepository.create(createPayload);
 
     const { id } = createdProduct;
-    for (const item of metrics) {
+    for (const item of tableData) {
       const createMetricsPayload = new UnitEconomicProductMetricsModel({
         label: item.label,
         percent: item.percent,

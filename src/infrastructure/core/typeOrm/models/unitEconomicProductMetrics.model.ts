@@ -52,7 +52,7 @@ export class UnitEconomicProductMetricsModel {
   @Column({ type: 'boolean', default: true })
   isEditable: boolean;
 
-  @ManyToOne(() => UnitEconomicProductsModel, (unitEconomicProduct) => unitEconomicProduct.unitEconomicProduct)
+  @ManyToOne(() => UnitEconomicProductsModel, (unitEconomicProduct) => unitEconomicProduct.tableData)
   @JoinColumn({ name: 'unit_economic_product_id' })
   productMetrics: UnitEconomicProductsModel;
 

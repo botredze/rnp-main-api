@@ -1,47 +1,28 @@
 import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecutor';
 import { OrganizationRepository } from '@/infrastructure/core/typeOrm/repositories/organization.repository';
 import { OrganizationStatuses } from '@/infrastructure/core/typeOrm/models/organizations.model';
-import {
-  GetProductsExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProducts.executor';
+import { GetProductsExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProducts.executor';
 import { GetStocksExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStocks.executor';
 import { GetSalesExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getSales.executor';
-import {
-  GetAdvertingPaymentHistoryExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingPaymentHistory.executor';
-import {
-  GetStockReportExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockReport.executor';
-import {
-  GetOrganizationInfoExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getOrganizationInfo.executor';
-import {
-  GetAdvertingListExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingList.executor';
-import {
-  GetAdvertingHistoryExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingHistory.executor';
+import { GetAdvertingPaymentHistoryExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingPaymentHistory.executor';
+import { GetStockReportExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockReport.executor';
+import { GetOrganizationInfoExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getOrganizationInfo.executor';
+import { GetAdvertingListExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingList.executor';
+import { GetAdvertingHistoryExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingHistory.executor';
 import { GetOrdersExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getOrders.executor';
-import {
-  GetProductStatisticExecutor
-} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProductStatistic.executor';
+import { GetProductStatisticExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProductStatistic.executor';
 import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advestingInfo.repository';
-import {
-  AdvestingDayStatisticRepository
-} from '@/infrastructure/core/typeOrm/repositories/advestingDayStatistic.repository';
+import { AdvestingDayStatisticRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayStatistic.repository';
 import { AdvestingDayAppsRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayApps.repository';
-import {
-  AdvestingDayAppsNmsRepository
-} from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
+import { AdvestingDayAppsNmsRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
-import {
-  AdvestingCostHistoryRepository
-} from '@/infrastructure/core/typeOrm/repositories/advestingCostHistory.repository';
+import { AdvestingCostHistoryRepository } from '@/infrastructure/core/typeOrm/repositories/advestingCostHistory.repository';
 import { OrderRepository } from '@/infrastructure/core/typeOrm/repositories/order.repository';
 import { HistoryRepository } from '@/infrastructure/core/typeOrm/repositories/history.repository';
 import { SalesRepository } from '@/infrastructure/core/typeOrm/repositories/sales.repository';
 import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/stocks.repository';
 import { ConfigService } from '@nestjs/config';
+import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
 
 export class WbControllerExecutor extends TaskExecutor {
   readonly #configService: ConfigService;
@@ -56,6 +37,7 @@ export class WbControllerExecutor extends TaskExecutor {
   readonly #productStatsRepository: HistoryRepository;
   readonly #salesRepository: SalesRepository;
   readonly #stockRepository: StocksRepository;
+  readonly #stockReportRepository: StockCountRepository;
 
   // executors
   readonly #getOrganizationInfoExecutor: GetOrganizationInfoExecutor;
@@ -82,6 +64,7 @@ export class WbControllerExecutor extends TaskExecutor {
     salesRepository: SalesRepository,
     stockRepository: StocksRepository,
     configService: ConfigService,
+    stockReportRepository: StockCountRepository,
   ) {
     super();
 
@@ -98,9 +81,13 @@ export class WbControllerExecutor extends TaskExecutor {
     this.#salesRepository = salesRepository;
     this.#stockRepository = stockRepository;
     this.#configService = configService;
+    this.#stockReportRepository = stockReportRepository;
 
     // executors (создаём после инициализации репозиториев)
-    this.#getOrganizationInfoExecutor = new GetOrganizationInfoExecutor(this.#organizationRepository,  this.#configService);
+    this.#getOrganizationInfoExecutor = new GetOrganizationInfoExecutor(
+      this.#organizationRepository,
+      this.#configService,
+    );
     this.#getProductsExecutor = new GetProductsExecutor(this.#productRepository);
     this.#getStocksExecutor = new GetStocksExecutor(this.#stockRepository);
     this.#getAdvertisingListExecutor = new GetAdvertingListExecutor(this.#advertInfoRepository);
@@ -109,10 +96,17 @@ export class WbControllerExecutor extends TaskExecutor {
       this.#productRepository,
       this.#advertDayStatisticRepository,
       this.#advertDayAppsRepository,
-      this.#advertDayAppsNmsRepository
+      this.#advertDayAppsNmsRepository,
     );
-    this.#getAdvertisingPaymentHistoryExecutor = new GetAdvertingPaymentHistoryExecutor(this.#advertingCostHistoryRepository);
-    this.#getStockReportExecutor = new GetStockReportExecutor();
+    this.#getAdvertisingPaymentHistoryExecutor = new GetAdvertingPaymentHistoryExecutor(
+      this.#advertingCostHistoryRepository,
+      this.#advertInfoRepository,
+    );
+    this.#getStockReportExecutor = new GetStockReportExecutor(
+      this.#stockReportRepository,
+      this.#productRepository,
+      this.#stockRepository,
+    );
     this.#getProductStatistic = new GetProductStatisticExecutor(this.#productRepository, this.#productStatsRepository);
     this.#getSalesExecutor = new GetSalesExecutor(this.#productRepository, this.#salesRepository);
     this.#getOrdersExecutor = new GetOrdersExecutor(this.#orderRepository, this.#productRepository);
@@ -126,17 +120,17 @@ export class WbControllerExecutor extends TaskExecutor {
     for (const organization of initialOrganizations) {
       const { apiKey, id, organizationName } = organization;
 
-      if(apiKey && id) {
+      if (apiKey && id) {
         await this.#getOrganizationInfoExecutor.execute(apiKey, id);
-        await this.#getSalesExecutor.execute(apiKey);
-        await this.#getProductsExecutor.execute(apiKey, id)
+        await this.#getStocksExecutor.execute(apiKey, id);
+        await this.#getProductsExecutor.execute(apiKey, id);
         await this.#getSalesExecutor.execute(apiKey);
         await this.#getOrdersExecutor.execute(apiKey);
         await this.#getProductStatistic.execute(apiKey, organizationName);
-
-        await this.#getAdvertisingListExecutor.execute(apiKey, id)
-        await this.#getAdvertingHistoryExecutor.execute(apiKey, id)
-        await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey)
+        await this.#getAdvertisingListExecutor.execute(apiKey, id);
+        await this.#getStockReportExecutor.execute(apiKey);
+        await this.#getAdvertingHistoryExecutor.execute(apiKey, id);
+        await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey);
       }
     }
   }

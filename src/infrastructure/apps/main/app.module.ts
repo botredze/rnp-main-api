@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -18,6 +18,15 @@ import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adv
 import { AdvertisingCostHistoryModel } from '@/infrastructure/core/typeOrm/models/advestingCostHistory.model';
 import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms.model';
 import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProducts.model';
+import { UnitEconomicProductMetricsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProductMetrics.model';
+import { UnitEconomicModule } from '@/infrastructure/apps/main/modules/unitEconomic/unit-economic.module';
+import { AuthMiddleware } from '@/infrastructure/apps/main/middleware/auth.middleware';
+import { UserRepository } from '@/infrastructure/core/typeOrm/repositories/user.repository';
+import { AuthModule } from '@/infrastructure/apps/main/modules/auth/auth.module';
+import { OrganizationModule } from '@/infrastructure/apps/main/modules/organization/organization.module';
+import { JwtService } from '@/infrastructure/services/jwtService/jwt.service';
+import { RnpStatisticModule } from '@/infrastructure/apps/main/modules/rnp-statistic/rnp-statistic.module';
+import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
 
 @Module({
   imports: [
@@ -27,6 +36,9 @@ import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/
       envFilePath: '.env',
       validate: env.validate,
     }),
+
+    TypeOrmModule.forFeature([UserModel]),
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<env.Environment>) => {
@@ -60,6 +72,8 @@ import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/
             AdvertisingDayAppModel,
             AdvertisingCostHistoryModel,
             UnitEconomicProductsModel,
+            UnitEconomicProductMetricsModel,
+            SchedularTasksModel,
           ],
           synchronize: true,
           logging: dbDebug,
@@ -76,8 +90,26 @@ import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/
         limit: 300,
       },
     ]),
+
+    UnitEconomicModule,
+    AuthModule,
+    OrganizationModule,
+    RnpStatisticModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    UserRepository,
+    JwtService,
+    {
+      provide: AuthMiddleware,
+      useFactory: (userRepository: UserRepository, jwtService: JwtService) =>
+        new AuthMiddleware(userRepository, jwtService),
+      inject: [UserRepository, JwtService],
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).exclude('api/auth/login', 'api/auth/register').forRoutes('*');
+  }
+}

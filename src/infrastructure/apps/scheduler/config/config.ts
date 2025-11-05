@@ -10,4 +10,8 @@ const CRON_RULES = {
 };
 
 export const defaultScheduledTasks = [
+  {
+    name: 'organization_init_executor',
+    scheduleRule: '0 0 * * *',
+  },
 ];

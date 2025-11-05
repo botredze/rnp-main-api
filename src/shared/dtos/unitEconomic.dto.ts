@@ -7,11 +7,11 @@ import {
   IsString,
   Max,
   Min,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export interface UnitEconomicGetQueryDto {
+export class UnitEconomicGetQueryDto {
   @IsOptional()
   @IsNumber()
   organizationId?: number;
@@ -19,6 +19,10 @@ export interface UnitEconomicGetQueryDto {
   @IsOptional()
   @IsNumber()
   productId?: number;
+
+  constructor(params: Partial<UnitEconomicGetQueryDto> = {}) {
+    Object.assign(this, params);
+  }
 }
 
 export class UnitEconomicMetricsDto {
@@ -26,6 +30,7 @@ export class UnitEconomicMetricsDto {
   label: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(100)
@@ -33,10 +38,12 @@ export class UnitEconomicMetricsDto {
 
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   value: number | null;
 
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   @Min(0)
   percentOfPrice: number | null;
 
@@ -60,28 +67,34 @@ export class UnitEconomicCreateDto {
 
   @IsNumber()
   @IsPositive()
+  @Type(() => Number)
   price: number;
 
   @IsNumber()
   @IsPositive()
+  @Type(() => Number)
   salePrice: number;
 
   @IsNumber()
+  @Type(() => Number)
   ssp: number;
 
   @IsNumber()
+  @Type(() => Number)
   priceWithSpp: number;
 
   @IsNumber()
+  @Type(() => Number)
   wbDiscount: number;
 
   @IsNumber()
+  @Type(() => Number)
   priceWithWbDiscount: number;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => UnitEconomicMetricsDto)
-  metrics: Array<UnitEconomicMetricsDto>;
+  tableData: Array<UnitEconomicMetricsDto>;
 
   constructor(params: Partial<UnitEconomicCreateDto> = {}) {
     Object.assign(this, params);

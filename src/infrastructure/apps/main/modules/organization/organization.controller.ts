@@ -1,25 +1,25 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
+import { OrganizationUseCase } from '@/useCase/controllers/organization/organization.useCase';
+import { Request } from 'express';
 
 @Controller('api/organization')
 export class OrganizationController {
+  readonly #ogranizationUseCase: OrganizationUseCase;
 
-  readonly #organizationGetUseCase;
-  readonly #organizationCreateUseCase;
-  readonly #organizationUpdateUseCase;
-
-  constructor() {
-
+  constructor(organizationUseCase: OrganizationUseCase) {
+    this.#ogranizationUseCase = organizationUseCase;
   }
 
-  async create() {
+  async create() {}
 
-  }
+  async update() {}
 
-  async update() {
+  async diactivateOrganization() {}
 
-  }
+  @Get('list')
+  async list(@Req() req: Request) {
+    const { user } = req;
 
-  async diactivateOrganization() {
-
+    return await this.#ogranizationUseCase.getList(user.id);
   }
 }

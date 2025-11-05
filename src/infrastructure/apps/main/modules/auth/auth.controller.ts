@@ -1,15 +1,20 @@
-import { Controller } from '@nestjs/common';
-
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { AuthDto } from '@/shared/dtos/auth.dto';
+import { AuthUseCases } from '@/useCase/controllers/auth/auth.useCases';
 
 @Controller('api/auth')
 export class AuthController {
+  readonly #authUseCase: AuthUseCases;
 
-  async login() {
-
+  constructor(authUseCase: AuthUseCases) {
+    this.#authUseCase = authUseCase;
   }
 
-  async logout() {
-
+  @Post('login')
+  async login(@Body() body: AuthDto) {
+    return this.#authUseCase.login(body);
   }
 
+  @Get('logout')
+  async logout() {}
 }

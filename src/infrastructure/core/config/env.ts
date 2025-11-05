@@ -1,6 +1,5 @@
-import { IsEnum, IsIP, IsInt, IsArray, Max, Min, IsOptional, validateSync, IsString, IsBoolean } from 'class-validator';
-import { Transform, Type, plainToInstance } from 'class-transformer';
-
+import { IsArray, IsBoolean, IsEnum, IsInt, IsIP, IsOptional, IsString, Max, Min, validateSync } from 'class-validator';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 
 export enum NodeEnvironment {
   Development = 'development',
@@ -45,7 +44,6 @@ export class Environment {
 
   AMQP_URL: string = 'amqp://localhost:5672';
 
-
   @IsEnum(DbDriver)
   @IsOptional()
   DB_DRIVER: DbDriver = DbDriver.Postgres;
@@ -69,6 +67,41 @@ export class Environment {
   @IsBoolean()
   @IsOptional()
   DB_DEBUG: boolean = false;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  EXECUTOR_PORT: number = 5000;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  SCHEDULER_PORT: number = 5001;
+
+  // Queue
+  @IsString()
+  RABBITMQ_HOST: string = 'localhost';
+
+  @Type(() => Number)
+  @IsInt()
+  RABBITMQ_PORT: number = 5672;
+
+  @IsString()
+  RABBITMQ_USERNAME: string = 'rabbitmq';
+
+  @IsString()
+  RABBITMQ_PASSWORD: string = 'rabbitmq';
+
+  @IsString()
+  @IsOptional()
+  RABBITMQ_QUEUE_NAME: string = 'data_analysis_queue';
+
+  @IsString()
+  RABBITMQ_VHOST: string = '/';
 }
 
 // TODO: separate

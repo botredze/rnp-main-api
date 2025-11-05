@@ -13,12 +13,14 @@ import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.mod
 
 @Entity({ name: 'stock_counts' })
 export class StockCountModel {
-
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
   @Column({ type: 'timestamp', name: 'date' })
   date: Date;
+
+  @Column({ name: 'log_warehouse_coef', type: 'decimal', nullable: true })
+  logWarehouseCoef: number;
 
   @Column({ type: 'timestamp', name: 'last_change_date', nullable: true })
   lastChangeDate: Date;
@@ -35,16 +37,16 @@ export class StockCountModel {
   @Column({ name: 'barcode', nullable: true })
   barcode: string;
 
-  @Column({ type: 'int', name: 'quantity', default: 0 })
+  @Column({ type: 'int', name: 'quantity', nullable: true })
   quantity: number;
 
-  @Column({ type: 'int', name: 'in_way_to_client', default: 0 })
+  @Column({ type: 'int', name: 'in_way_to_client', nullable: true })
   inWayToClient: number;
 
-  @Column({ type: 'int', name: 'in_way_from_client', default: 0 })
+  @Column({ type: 'int', name: 'in_way_from_client', nullable: true })
   inWayFromClient: number;
 
-  @Column({ type: 'int', name: 'quantity_full', default: 0 })
+  @Column({ type: 'int', name: 'quantity_full', nullable: true })
   quantityFull: number;
 
   @Column({ name: 'category', nullable: true })
@@ -65,22 +67,22 @@ export class StockCountModel {
   @Column({ type: 'decimal', name: 'discount', precision: 5, scale: 2, nullable: true })
   discount: number;
 
-  @Column({ name: 'is_supply', default: false })
+  @Column({ name: 'is_supply', nullable: true })
   isSupply: boolean;
 
-  @Column({ name: 'is_realization', default: false })
+  @Column({ name: 'is_realization', nullable: true })
   isRealization: boolean;
 
   @Column({ name: 'sc_code', nullable: true })
   SCCode: string;
 
-  @Column({ type: 'int', name: 'stock_count', default: 0 })
+  @Column({ type: 'int', name: 'stock_count', nullable: true })
   stockCount: number;
 
-  @Column({ type: 'decimal', name: 'stock_sum', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', name: 'stock_sum', precision: 12, scale: 2, nullable: true })
   stockSum: number;
 
-  @Column({ type: 'decimal', name: 'avg_orders_by_mouth', precision: 8, scale: 2, default: 0 })
+  @Column({ type: 'decimal', name: 'avg_orders_by_mouth', precision: 8, scale: 2, nullable: true })
   avgOrdersByMouth: number;
 
   @Column({ type: 'json', name: 'metrics', nullable: true })
@@ -89,14 +91,14 @@ export class StockCountModel {
   @Column({ name: 'product_id' })
   productId: number;
 
-  @ManyToOne(() => ProductsModel, product => product.stockCounts)
+  @ManyToOne(() => ProductsModel, (product) => product.stockCounts)
   @JoinColumn({ name: 'product_id' })
   product: ProductsModel;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', nullable: true })
   updatedAt: Date;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', nullable: true })
   createdAt: Date;
 
   @BeforeInsert()

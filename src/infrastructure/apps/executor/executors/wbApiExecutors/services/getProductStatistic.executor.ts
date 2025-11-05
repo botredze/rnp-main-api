@@ -3,34 +3,29 @@ import axios, { AxiosInstance } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { DateTime } from 'luxon';
 import fs from 'fs';
-import path from 'path';
 import AdmZip from 'adm-zip';
-import XLSX from 'xlsx';
 import { StatisticItem } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/statistic.dto';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { HistoryRepository } from '@/infrastructure/core/typeOrm/repositories/history.repository';
-import { DeepPartial } from 'typeorm';
 import { HistoryModel } from '@/infrastructure/core/typeOrm/models/history.model';
-
+import * as path from 'node:path';
+import Papa from 'papaparse';
 
 export class GetProductStatisticExecutor extends TaskExecutor {
   readonly #header = {
     'Content-Type': 'application/json',
-  }
+  };
 
-  readonly #createReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads'
-  readonly #checkStatusReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads'
-  readonly #downloadReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads/file'
+  readonly #createReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads';
+  readonly #checkStatusReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads';
+  readonly #downloadReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads/file';
 
-  #axiosService: AxiosInstance
+  #axiosService: AxiosInstance;
 
   readonly #productRepository: ProductRepository;
   readonly #productStatsRepository: HistoryRepository;
 
-  constructor(
-    productRepository: ProductRepository,
-    productStatsRepository: HistoryRepository,
-  ) {
+  constructor(productRepository: ProductRepository, productStatsRepository: HistoryRepository) {
     super();
     this.#axiosService = axios.create();
     this.#productRepository = productRepository;
@@ -46,42 +41,51 @@ export class GetProductStatisticExecutor extends TaskExecutor {
     });
   }
 
-  async downloadAndParseReport(downloadId: string, savePath: string): Promise<Array<StatisticItem>>{
+  async downloadAndParseReport(downloadId: string, saveDir: string): Promise<Array<StatisticItem>> {
     try {
-      const response = await this.#axiosService.get(
-        `${this.#downloadReport}/${downloadId}`,
-        { responseType: 'arraybuffer' }
-      );
+      if (!fs.existsSync(saveDir)) {
+        fs.mkdirSync(saveDir, { recursive: true });
+      }
+
+      const savePath = path.resolve(saveDir, `${downloadId}.zip`);
+
+      const response = await this.#axiosService.get(`${this.#downloadReport}/${downloadId}`, {
+        responseType: 'arraybuffer',
+      });
 
       fs.writeFileSync(savePath, response.data);
-      console.log(`Отчёт сохранён: ${savePath}`);
 
       const zip = new AdmZip(savePath);
       const zipEntries = zip.getEntries();
 
-      const excelEntry = zipEntries.find(e => e.entryName.endsWith('.xlsx'));
-      if (!excelEntry) {
-        throw new Error('Excel-файл в ZIP не найден');
+      if (!zipEntries.length) {
+        throw new Error('ZIP-файл пустой');
       }
 
-      const excelBuffer = excelEntry.getData();
+      const csvEntry = zipEntries.find((e) => e.entryName.endsWith('.csv'));
 
-      const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      if (!csvEntry) {
+        throw new Error('CSV-файл в ZIP не найден');
+      }
 
-      const data: Array<StatisticItem> = XLSX.utils.sheet_to_json(sheet);
+      const csvBuffer = csvEntry.getData();
+      const csvString = csvBuffer.toString('utf-8');
+
+      const parsed = Papa.parse(csvString, {
+        header: true,
+        skipEmptyLines: true,
+      });
+
+      const data: Array<StatisticItem> = parsed.data as Array<StatisticItem>;
+      console.log('Парсинг CSV завершён, записей:', data.length);
 
       return data;
-
     } catch (err) {
       console.error('Ошибка при скачивании/распаковке/парсинге отчёта:', err);
       throw err;
     }
   }
-
-
-  async  waitForReport(idReport: string) {
+  async waitForReport(idReport: string) {
     const params = {
       'filter[downloadIds][]': idReport,
     };
@@ -90,7 +94,13 @@ export class GetProductStatisticExecutor extends TaskExecutor {
       try {
         const response = await this.#axiosService.get(`${this.#checkStatusReport}`, { params });
 
-        const report = response.data[0];
+        const report = response.data.data.find((item) => item.id === idReport);
+
+        if (!report) {
+          console.warn(`Отчёт с id ${idReport} не найден в ответе`);
+          await new Promise((resolve) => setTimeout(resolve, 20000));
+          continue;
+        }
 
         if (report.status === 'SUCCESS') {
           return 'SUCCESS';
@@ -98,8 +108,7 @@ export class GetProductStatisticExecutor extends TaskExecutor {
           return 'FAILED';
         }
 
-        await new Promise(resolve => setTimeout(resolve, 20000));
-
+        await new Promise((resolve) => setTimeout(resolve, 20000));
       } catch (err) {
         console.error('Ошибка при проверке статуса отчёта:', err);
         break;
@@ -107,8 +116,7 @@ export class GetProductStatisticExecutor extends TaskExecutor {
     }
   }
 
-
-  async execute(apiKey: string, organizationName: string): Promise<void>{
+  async execute(apiKey: string, organizationName: string): Promise<void> {
     this.#initAxios(apiKey);
 
     try {
@@ -119,32 +127,36 @@ export class GetProductStatisticExecutor extends TaskExecutor {
 
       const reportParams = {
         id: idReport,
-        reportType: "DETAIL_HISTORY_REPORT",
-        userReportName: `${organizationName}-${new Date().toISOString()}-${idReport}`,
+        reportType: 'DETAIL_HISTORY_REPORT',
+        userReportName: `${organizationName}-${idReport}`,
         params: {
           startDate: startDate.toISODate(),
-          endDate: endDate.toISODate()
+          endDate: endDate.toISODate(),
         },
-        aggregationLevel: "day",
-        skipDeletedNm: false
-      }
+        aggregationLevel: 'day',
+        skipDeletedNm: false,
+      };
       const createReportReposonse = await this.#axiosService.post(this.#createReport, reportParams);
 
-      if(createReportReposonse.status === 200) {
+      if (createReportReposonse.status === 200) {
         const waitReportStatus = await this.waitForReport(idReport);
-        if(waitReportStatus === 'SUCCESS') {
-          const statisticData = await this.downloadAndParseReport(idReport, `../wb-reports/${reportParams.userReportName}`);
+        if (waitReportStatus === 'SUCCESS') {
+          const statisticData = await this.downloadAndParseReport(
+            idReport,
+            `wb-reports/${reportParams.userReportName}.zip`,
+          );
 
-          for(const statistic of statisticData) {
-            const product = await this.#productRepository.findOne({where: {nmID: statistic.nmID}})
+          for (const statistic of statisticData) {
+            const product = await this.#productRepository.findOne({ where: { nmID: statistic.nmID } });
 
-            if(!product) {
-              throw Error('Product not found')
+            if (!product) {
+              throw Error('Product not found');
             }
 
-            const saveStatisticPayload: DeepPartial<HistoryModel> = {
+            const saveStatisticPayload = new HistoryModel({
               date: new Date(statistic.dt),
               openCardCount: statistic.openCardCount,
+              nmId: statistic.nmID,
               addToCardCount: statistic.addToCartCount,
               ordersCount: statistic.ordersCount,
               orderSumRub: statistic.ordersSumRub,
@@ -154,22 +166,24 @@ export class GetProductStatisticExecutor extends TaskExecutor {
               addToCardConversion: statistic.addToCartConversion,
               cardToOrderConversion: statistic.cartToOrderConversion,
               addToWishlist: statistic.addToWishlist,
-            }
+            });
 
-            const existingStatisticItem = await this.#productStatsRepository.findOne({where: {date: new Date(statistic.dt), nmId: statistic.nmID}})
+            const existingStatisticItem = await this.#productStatsRepository.findOne({
+              where: { date: new Date(statistic.dt), nmId: statistic.nmID },
+            });
 
-            if(existingStatisticItem) {
-              await this.#productStatsRepository.updateById(existingStatisticItem.id, saveStatisticPayload)
-            }else {
+            if (existingStatisticItem) {
+              await this.#productStatsRepository.updateById(existingStatisticItem.id, saveStatisticPayload);
+            } else {
               await this.#productStatsRepository.create({
                 ...saveStatisticPayload,
                 productId: product.id,
-              })
+              });
             }
-           }
+          }
         }
       }
-    }catch (error) {
+    } catch (error) {
       console.log(error, 'error');
     }
   }

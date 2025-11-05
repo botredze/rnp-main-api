@@ -49,7 +49,7 @@ export class UnitEconomicProductsModel {
   @OneToMany(() => UnitEconomicProductMetricsModel, (unitEconomicProduct) => unitEconomicProduct.productMetrics, {
     cascade: true,
   })
-  unitEconomicProduct: Array<UnitEconomicProductMetricsModel>;
+  tableData: Array<UnitEconomicProductMetricsModel>;
 
   @Column({ name: 'organization_id' })
   organizationId: number;

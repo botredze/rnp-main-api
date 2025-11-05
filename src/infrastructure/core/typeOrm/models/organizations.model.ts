@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -63,7 +64,11 @@ export class OrganizationsModel {
   createdAt: Date;
 
   @ManyToOne(() => UserModel, (user) => user.organizations)
+  @JoinColumn({ name: 'user_id' })
   user?: UserModel;
+
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @OneToMany(() => ProductsModel, (product) => product.organization)
   products?: Array<ProductsModel>;

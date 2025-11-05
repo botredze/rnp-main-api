@@ -10,20 +10,19 @@ import { AdvestingDayAppsRepository } from '@/infrastructure/core/typeOrm/reposi
 import {
   AdvestingDayAppsNmsRepository
 } from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
-import { DeepPartial } from 'typeorm';
+import { In } from 'typeorm';
 import { AdvertisingDayStatisticModel } from '@/infrastructure/core/typeOrm/models/advertisingDayStatistic.model';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms.model';
 import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adverstingDayApps.model';
 
-
 export class GetAdvertingHistoryExecutor extends TaskExecutor {
   readonly #header = {
     'Content-Type': 'application/json',
-  }
+  };
 
-  readonly #baseUrl = 'https://advert-api.wildberries.ru/adv/v3/fullstats'
-  #axiosService: AxiosInstance
+  readonly #baseUrl = 'https://advert-api.wildberries.ru/adv/v3/fullstats';
+  #axiosService: AxiosInstance;
 
   readonly #advertInfoRepository: AdvertInfoRepository;
   readonly #advertDayStatisticRepository: AdvestingDayStatisticRepository;
@@ -31,7 +30,13 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
   readonly #advertDayAppsNms: AdvestingDayAppsNmsRepository;
   readonly #productRepository: ProductRepository;
 
-  constructor(advertInfoRepository: AdvertInfoRepository, productRepository: ProductRepository, advertDayStatisticRepository: AdvestingDayStatisticRepository, advertDayAppsRepository: AdvestingDayAppsRepository, advertDayAppsNms: AdvestingDayAppsNmsRepository) {
+  constructor(
+    advertInfoRepository: AdvertInfoRepository,
+    productRepository: ProductRepository,
+    advertDayStatisticRepository: AdvestingDayStatisticRepository,
+    advertDayAppsRepository: AdvestingDayAppsRepository,
+    advertDayAppsNms: AdvestingDayAppsNmsRepository,
+  ) {
     super();
     this.#axiosService = axios.create();
     this.#advertInfoRepository = advertInfoRepository;
@@ -50,14 +55,18 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
     });
   }
 
-
-  async execute(apiKey: string, organizationId: number): Promise<void>{
+  async execute(apiKey: string, organizationId: number): Promise<void> {
     this.#initAxios(apiKey);
 
     try {
-      const advertList = await this.#advertInfoRepository.findMany({where: {organizationId}})
+      const advertList = await this.#advertInfoRepository.findMany({
+        where: {
+          organizationId,
+          status: In([7, 9, 11]),
+        },
+      });
 
-      const ids = advertList.map(ad => ad.advertId);
+      const ids = advertList.map((ad) => ad.advertId);
 
       const endDate = DateTime.now().toISODate(); // сегодня, формат YYYY-MM-DD
       const beginDate = DateTime.now().minus({ days: 30 }).toISODate(); // 30 дней назад
@@ -70,14 +79,24 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
         },
       });
 
-      if(advertingStatsByPeriod.status === 200) {
+      if (advertingStatsByPeriod.status === 200) {
         const advertStatsData: Array<AdvertStats> = advertingStatsByPeriod.data;
 
         for (const advertStats of advertStatsData) {
           for (const day of advertStats.days) {
-            const existingStats = await this.#advertDayStatisticRepository.findOne({where: {date: new Date(day.date)}})
+            const existingStats = await this.#advertDayStatisticRepository.findOne({
+              where: { date: new Date(day.date) },
+            });
 
-            const dayPayload: DeepPartial<AdvertisingDayStatisticModel> = {
+            const advesting = await this.#advertInfoRepository.findOne({
+              where: { advertId: advertStats.advertId },
+            });
+
+            let createdDayStats = {
+              id: 1,
+            };
+
+            const dayPayload = new AdvertisingDayStatisticModel({
               date: new Date(day.date),
               atbs: day.atbs,
               canceled: day.canceled,
@@ -89,20 +108,22 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
               sum: day.sum,
               sumPrice: day.sum_price,
               views: day.views,
-              advertisingId: advertStats.advertId,
+              advertisingId: advesting.id,
+            });
 
-            }
-
-            if(existingStats) {
-              await this.#advertDayStatisticRepository.updateById(existingStats.id, dayPayload)
-            }else {
-              await this.#advertDayStatisticRepository.create(dayPayload)
+            if (existingStats) {
+              await this.#advertDayStatisticRepository.updateById(existingStats.id, dayPayload);
+            } else {
+              createdDayStats = await this.#advertDayStatisticRepository.create(dayPayload);
             }
 
             for (const app of day.apps) {
-              let appRecord = await this.#advertDayAppsRepository.findOne({ where: { dayStatisticId: existingStats.id, appType: app.appType }});
-              const appPayload: DeepPartial<AdvertisingDayAppModel> = {
-                dayStatisticId: existingStats.id,
+              let appRecord = await this.#advertDayAppsRepository.findOne({
+                where: { dayStatisticId: existingStats?.id ?? createdDayStats.id, appType: app.appType },
+              });
+
+              const appPayload = new AdvertisingDayAppModel({
+                dayStatisticId: existingStats?.id ?? createdDayStats.id,
                 appType: app.appType,
                 atbs: app.atbs,
                 canceled: app.canceled,
@@ -114,7 +135,7 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
                 sum: app.sum,
                 sum_price: app.sum_price,
                 views: app.views,
-              };
+              });
 
               if (appRecord) {
                 await this.#advertDayAppsRepository.updateById(appRecord.id, appPayload);
@@ -123,11 +144,13 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
               }
 
               for (const nm of app.nms) {
-                const product = await this.#productRepository.findOne({ where: { nmID: nm.nmId }});
+                const product = await this.#productRepository.findOne({ where: { nmID: nm.nmId } });
                 if (!product) continue;
 
-                let nmRecord = await this.#advertDayAppsNms.findOne({ where: { appStatisticId: appRecord.id, nmId: nm.nmId }});
-                const nmPayload: DeepPartial<AdvertisingDayAppNmModel> = {
+                let nmRecord = await this.#advertDayAppsNms.findOne({
+                  where: { appStatisticId: appRecord.id, nmId: nm.nmId },
+                });
+                const nmPayload = new AdvertisingDayAppNmModel({
                   appStatisticId: appRecord.id,
                   nmId: nm.nmId,
                   atbs: nm.atbs,
@@ -141,7 +164,7 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
                   sum_price: nm.sum_price,
                   views: nm.views,
                   productId: product.id,
-                };
+                });
 
                 if (nmRecord) {
                   await this.#advertDayAppsNms.updateById(nmRecord.id, nmPayload);
@@ -153,8 +176,7 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
           }
         }
       }
-
-    }catch (error) {
+    } catch (error) {
       console.log(error, 'error');
     }
   }

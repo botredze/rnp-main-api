@@ -6,46 +6,45 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
 
-@Entity({name: 'organization_stocks'})
+@Entity({ name: 'organization_stocks' })
 export class StocksModel {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column({name: 'stock_id'})
+  @Column({ name: 'stock_id' })
   stockId: number;
 
-  @Column({name: 'office_id'})
+  @Column({ name: 'office_id' })
   officeId: number;
 
-  @Column({name: 'delivery_type'})
+  @Column({ name: 'delivery_type' })
   deliveryType: number;
 
-  @Column({name: 'cargo_type'})
+  @Column({ name: 'cargo_type' })
   cargoType: number;
 
-  @Column({name: 'is_processing', type: 'boolean', default: true})
+  @Column({ name: 'is_processing', type: 'boolean', default: true })
   isProcessing: boolean;
 
-  @Column({name: 'is_deleting', type: 'boolean', default: false})
+  @Column({ name: 'is_deleting', type: 'boolean', default: false })
   isDeleting: boolean;
 
-  @Column({name: 'stock_name'})
+  @Column({ name: 'stock_name' })
   stockName: string;
 
-  @ManyToOne(() => OrganizationsModel, org => org.stocks)
+  @ManyToOne(() => OrganizationsModel, (org) => org.stocks)
   @JoinColumn({ name: 'organization_id' })
   organization: OrganizationsModel;
 
   @Column({ name: 'organization_id' })
   organizationId: number;
 
-  @UpdateDateColumn({ name: "updated_at" })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })
@@ -62,9 +61,7 @@ export class StocksModel {
     this.updatedAt = new Date();
   }
 
-
   constructor(params: Partial<StocksModel> = {}) {
     Object.assign(this, params);
   }
-
 }
