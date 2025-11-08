@@ -31,6 +31,8 @@ import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/sto
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
+import { ProductMetricsRepository } from '@/infrastructure/core/typeOrm/repositories/productMetrics.repository';
+import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 
 @Module({
   imports: [
@@ -51,6 +53,7 @@ import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories
       UnitEconomicProductsModel,
       UnitEconomicProductMetricsModel,
       SchedularTasksModel,
+      ProductLogAndStrategyModel,
     ]),
   ],
   providers: [
@@ -67,6 +70,7 @@ import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories
     SalesRepository,
     StocksRepository,
     StockCountRepository,
+    ProductMetricsRepository,
 
     {
       provide: 'QUEUE_SERVICE',

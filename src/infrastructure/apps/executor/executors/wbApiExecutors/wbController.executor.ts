@@ -131,6 +131,10 @@ export class WbControllerExecutor extends TaskExecutor {
         await this.#getStockReportExecutor.execute(apiKey);
         await this.#getAdvertingHistoryExecutor.execute(apiKey, id);
         await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey);
+
+        await this.#organizationRepository.updateById(id, {
+          status: OrganizationStatuses.Active,
+        });
       }
     }
   }

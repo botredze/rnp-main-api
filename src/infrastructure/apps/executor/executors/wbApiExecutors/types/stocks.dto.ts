@@ -37,3 +37,19 @@ export interface WarehouseStatisticItem {
 }
 
 export type WarehouseStatistic = Array<WarehouseStatisticItem>;
+
+export interface WarehouseInfo {
+  warehouseName: string;
+  quantity: number;
+}
+
+export interface ProductStockInfo {
+  brand: string;
+  subjectName: string;
+  vendorCode: string;
+  nmId: number;
+  barcode: string;
+  techSize: string;
+  volume: number;
+  warehouses: Array<WarehouseInfo>;
+}

@@ -12,6 +12,7 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() body: AuthDto) {
+    console.log(body, 'body');
     return this.#authUseCase.login(body);
   }
 

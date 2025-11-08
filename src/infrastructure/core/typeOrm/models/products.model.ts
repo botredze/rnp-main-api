@@ -1,16 +1,16 @@
 import {
-  CreateDateColumn,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  Column,
-  ManyToOne,
-  OneToMany,
-  Entity,
-  ManyToMany,
-  JoinTable,
-  JoinColumn,
   BeforeInsert,
   BeforeUpdate,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { OrganizationsModel } from '@/infrastructure/core/typeOrm/models/organizations.model';
 import { OrderModel } from '@/infrastructure/core/typeOrm/models/order.model';
@@ -18,10 +18,10 @@ import { SalesModel } from '@/infrastructure/core/typeOrm/models/sales.model';
 import { HistoryModel } from '@/infrastructure/core/typeOrm/models/history.model';
 import { StockCountModel } from '@/infrastructure/core/typeOrm/models/stockCount.model';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
+import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 
-@Entity({name: 'products'})
+@Entity({ name: 'products' })
 export class ProductsModel {
-
   @PrimaryGeneratedColumn({ name: 'id' })
   id?: number;
 
@@ -52,26 +52,29 @@ export class ProductsModel {
   @Column({ type: 'json', name: 'photos', nullable: true })
   photos: any;
 
-  @ManyToOne(() => OrganizationsModel, org => org.products)
+  @ManyToOne(() => OrganizationsModel, (org) => org.products)
   @JoinColumn({ name: 'organization_id' })
   organization?: OrganizationsModel;
 
   @Column({ name: 'organization_id' })
   organizationId: number;
 
-  @OneToMany(() => OrderModel, order => order.product)
+  @OneToMany(() => OrderModel, (order) => order.product)
   orders?: Array<OrderModel>;
 
-  @OneToMany(() => SalesModel, sale => sale.product)
+  @OneToMany(() => SalesModel, (sale) => sale.product)
   sales?: Array<SalesModel>;
 
-  @OneToMany(() => HistoryModel, history => history.product)
+  @OneToMany(() => HistoryModel, (history) => history.product)
   histories?: Array<HistoryModel>;
 
-  @OneToMany(() => StockCountModel, stock => stock.product)
+  @OneToMany(() => StockCountModel, (stock) => stock.product)
   stockCounts?: Array<StockCountModel>;
 
-  @ManyToMany(() => AdvertisingModel, ad => ad.products)
+  @OneToMany(() => ProductLogAndStrategyModel, (metric) => metric.product)
+  metrics?: Array<ProductLogAndStrategyModel>;
+
+  @ManyToMany(() => AdvertisingModel, (ad) => ad.products)
   @JoinTable({ name: 'product_advertising' })
   advertisements?: Array<AdvertisingModel>;
 
@@ -95,6 +98,4 @@ export class ProductsModel {
   constructor(params: Partial<ProductsModel> = {}) {
     Object.assign(this, params);
   }
-
-
 }

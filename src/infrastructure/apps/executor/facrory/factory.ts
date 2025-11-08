@@ -18,6 +18,9 @@ import { SalesRepository } from '@/infrastructure/core/typeOrm/repositories/sale
 import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/stocks.repository';
 import { WbControllerExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/wbController.executor';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
+import { MetricsExecutor } from '@/infrastructure/apps/executor/executors/productMetrics/metrics.executor';
+import { ProductMetricsRepository } from '@/infrastructure/core/typeOrm/repositories/productMetrics.repository';
+import { GetStockCountTodayExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockCountToday.executor';
 
 @Injectable()
 export class TaskExecutorFactory {
@@ -37,6 +40,7 @@ export class TaskExecutorFactory {
     private readonly salesRepository: SalesRepository,
     private readonly stockRepository: StocksRepository,
     private readonly stockCountRepository: StockCountRepository,
+    private readonly productMetricsRepository: ProductMetricsRepository,
   ) {}
 
   create(taskName: TaskName): TaskExecutor {
@@ -59,6 +63,15 @@ export class TaskExecutorFactory {
           this.stockCountRepository,
         );
 
+      case TaskName.CreateProductLogs:
+        return new MetricsExecutor(this.productRepository, this.productMetricsRepository);
+
+      case TaskName.GetStockCount:
+        return new GetStockCountTodayExecutor(
+          this.stockCountRepository,
+          this.productRepository,
+          this.organizationRepository,
+        );
       default:
         throw new Error(`No executor found for task: ${taskName}`);
     }

@@ -27,6 +27,7 @@ import { OrganizationModule } from '@/infrastructure/apps/main/modules/organizat
 import { JwtService } from '@/infrastructure/services/jwtService/jwt.service';
 import { RnpStatisticModule } from '@/infrastructure/apps/main/modules/rnp-statistic/rnp-statistic.module';
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
+import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedu
             UnitEconomicProductsModel,
             UnitEconomicProductMetricsModel,
             SchedularTasksModel,
+            ProductLogAndStrategyModel,
           ],
           synchronize: true,
           logging: dbDebug,

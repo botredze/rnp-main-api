@@ -5,6 +5,8 @@ export const EVENT_EMITTER_EVENTS = {
 export enum TaskName {
   SHIPPING = 'shipping',
   OrganizationInitExecutor = 'organization_init_executor',
+  CreateProductLogs = 'create_product_logs',
+  GetStockCount = 'get_stock_count',
 }
 
 export const TASK_STATUS = {
