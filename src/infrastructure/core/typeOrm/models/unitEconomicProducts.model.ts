@@ -27,20 +27,8 @@ export class UnitEconomicProductsModel {
   @Column({ name: 'price' })
   price: number;
 
-  @Column({ name: 'sale_price' })
-  salePrice: number;
-
   @Column({ name: 'ssp' })
   ssp: number;
-
-  @Column({ name: 'price_with_ssp' })
-  priceWithSpp: number;
-
-  @Column({ name: 'wb_discount' })
-  wbDiscount: number;
-
-  @Column({ name: 'price_with_wb_discount' })
-  priceWithWbDiscount: number;
 
   @ManyToOne(() => OrganizationsModel, (org) => org.stocks)
   @JoinColumn({ name: 'organization_id' })

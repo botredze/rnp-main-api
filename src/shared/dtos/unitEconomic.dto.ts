@@ -41,14 +41,23 @@ export class UnitEconomicMetricsDto {
   @Type(() => Number)
   value: number | null;
 
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(0)
-  percentOfPrice: number | null;
-
   @IsBoolean()
   isEditable: boolean;
+
+  @IsString()
+  symbol: string;
+
+  @IsBoolean()
+  activeLine: boolean;
+
+  @IsBoolean()
+  disabledInput: boolean;
+
+  @IsBoolean()
+  disabledView: boolean;
+
+  @IsBoolean()
+  seconder: boolean;
 
   constructor(params: Partial<UnitEconomicMetricsDto> = {}) {
     Object.assign(this, params);
@@ -71,25 +80,8 @@ export class UnitEconomicCreateDto {
   price: number;
 
   @IsNumber()
-  @IsPositive()
-  @Type(() => Number)
-  salePrice: number;
-
-  @IsNumber()
   @Type(() => Number)
   ssp: number;
-
-  @IsNumber()
-  @Type(() => Number)
-  priceWithSpp: number;
-
-  @IsNumber()
-  @Type(() => Number)
-  wbDiscount: number;
-
-  @IsNumber()
-  @Type(() => Number)
-  priceWithWbDiscount: number;
 
   @IsArray()
   @ValidateNested({ each: true })

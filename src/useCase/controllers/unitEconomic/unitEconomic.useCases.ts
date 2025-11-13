@@ -53,11 +53,7 @@ export class UnitEconomicUseCase {
       productName: query.productName,
       vendorCode: query.vendorCode,
       price: query.price,
-      salePrice: query.salePrice,
       ssp: query.ssp,
-      wbDiscount: query.wbDiscount,
-      priceWithSpp: query.priceWithSpp,
-      priceWithWbDiscount: query.priceWithWbDiscount,
       organizationId,
     });
     const createdProduct = await this.#unitEconomicProductRepository.create(createPayload);
@@ -68,9 +64,10 @@ export class UnitEconomicUseCase {
         label: item.label,
         percent: item.percent,
         value: item.value,
-        percentOfPrice: item.percentOfPrice,
-        isEditable: item.isEditable,
         unitEconomicProductId: id,
+        activeLine: item.activeLine,
+        disabledView: item.disabledView,
+        disabledInput: item.disabledInput,
       });
 
       await this.#unitEconomicProductMetricsRepository.create(createMetricsPayload);

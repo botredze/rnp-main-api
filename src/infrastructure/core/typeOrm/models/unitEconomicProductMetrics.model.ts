@@ -49,8 +49,20 @@ export class UnitEconomicProductMetricsModel {
   })
   percentOfPrice: number | null;
 
+  @Column({ type: 'text', nullable: true })
+  symbol: boolean;
+
   @Column({ type: 'boolean', default: true })
-  isEditable: boolean;
+  activeLine: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  disabledInput: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  disabledView: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  seconder: boolean;
 
   @ManyToOne(() => UnitEconomicProductsModel, (unitEconomicProduct) => unitEconomicProduct.tableData)
   @JoinColumn({ name: 'unit_economic_product_id' })

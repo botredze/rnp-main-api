@@ -13,50 +13,43 @@ export class OrderRepository extends TypeOrmRepository<OrderModel> {
     const start = DateTime.fromISO(startDate).startOf('day').toJSDate();
     const end = DateTime.fromISO(endDate).endOf('day').toJSDate();
 
-    const orders = await this.repository
-      .createQueryBuilder('orders')
-      .where('orders.product_id = :productId', { productId })
-      .andWhere('orders.date BETWEEN :start AND :end', { start, end })
-      .select([
-        'orders.id',
-        'orders.date',
-        'orders.lastChangeDate',
-        'orders.totalPrice',
-        'orders.discountPercent',
-        'orders.finishedPrice',
-        'orders.priceWithDisc',
-        'orders.isCancel',
-        'orders.cancelDate',
-        'orders.warehouseName',
-        'orders.countryName',
-        'orders.regionName',
-        'orders.brand',
-        'orders.category',
-        'orders.subject',
-        'orders.techSize',
-        'orders.supplierArticle',
-        'orders.barcode',
-        'orders.sticker',
-        'orders.gNumber',
-        'orders.srid',
-        'orders.createdAt',
-        'orders.updatedAt',
-      ])
-      .orderBy('orders.date', 'ASC')
-      .getMany();
+    const result = await this.repository.query(
+      `
+    WITH orders_daily AS (
+      SELECT 
+        DATE_TRUNC('day', o.date) AS day,
+        COUNT(o.id)::int AS order_count,
+        SUM(o."totalPrice")::numeric AS total_amount
+      FROM orders o
+      WHERE o.product_id = $1
+        AND o.date BETWEEN $2 AND $3
+      GROUP BY DATE_TRUNC('day', o.date)
+    ),
+    sales_daily AS (
+      SELECT 
+        DATE_TRUNC('day', s.date) AS day,
+        COUNT(s.id)::int AS sales_count
+      FROM sales s
+      WHERE s.product_id = $1
+        AND s.date BETWEEN $2 AND $3
+      GROUP BY DATE_TRUNC('day', s.date)
+    )
+    SELECT 
+      o.day::date AS date,
+      o.order_count,
+      o.total_amount,
+      COALESCE(s.sales_count, 0) AS sales_count,
+      CASE 
+        WHEN COALESCE(s.sales_count, 0) = 0 THEN 0
+        ELSE ROUND((o.order_count::decimal / s.sales_count::decimal) * 100, 2)
+      END AS buyout_percent
+    FROM orders_daily o
+    LEFT JOIN sales_daily s ON o.day = s.day
+    ORDER BY o.day ASC;
+    `,
+      [productId, start, end],
+    );
 
-    const aggregates = await this.repository
-      .createQueryBuilder('orders')
-      .select('COUNT(orders.id)', 'totalCount')
-      .addSelect('SUM(orders.total_price)', 'totalAmount')
-      .where('orders.product_id = :productId', { productId })
-      .andWhere('orders.date BETWEEN :start AND :end', { start, end })
-      .getRawOne<{ totalcount: string; totalamount: string }>();
-
-    return {
-      orders,
-      totalCount: Number(aggregates?.totalcount ?? 0),
-      totalAmount: Number(aggregates?.totalamount ?? 0),
-    };
+    return result;
   }
 }

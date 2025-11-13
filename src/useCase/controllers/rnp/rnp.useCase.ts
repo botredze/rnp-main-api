@@ -82,8 +82,13 @@ export class RnpUseCase {
         responseEndDate = today.endOf('month').toISODate(); // последнее число месяца
         break;
 
+      case 'quarter':
+        responseStartDate = today.startOf('quarter').toISODate();
+        responseEndDate = today.endOf('quarter').toISODate();
+        break;
+
       case 'allTime':
-        responseStartDate = '2000-01-01'; // любое минимальное значение
+        responseStartDate = '2025-01-01';
         responseEndDate = today.toISODate();
         break;
     }
@@ -92,9 +97,12 @@ export class RnpUseCase {
   }
 
   async getRnpAnalytics(query: GetRnpAnalyticsDto): Promise<any> {
+    console.log(query, 'query');
     const { productId } = query;
 
     const { responseStartDate, responseEndDate } = this.getRnpTimePeriod(query);
+
+    console.log(responseStartDate, responseEndDate, 'responseStartDate, responseEndDate');
 
     const sales = await this.#salesRepository.getSalesByDateRangeAndProduct(
       responseStartDate,

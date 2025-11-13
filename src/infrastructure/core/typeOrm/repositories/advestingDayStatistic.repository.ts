@@ -12,18 +12,22 @@ export class AdvestingDayStatisticRepository extends TypeOrmRepository<Advertisi
     return this.repository
       .createQueryBuilder('day')
       .leftJoin('day.apps', 'app')
-      .leftJoin('app.nms', 'nm') // подключаем NM, чтобы фильтровать по productId
+      .leftJoin('app.nms', 'nm')
       .select([
         'day.date AS date',
         'app.appType AS appType',
-        'SUM(nm.sum_price) AS spend', // теперь суммируем только по NM
+
+        // основные суммы
+        'SUM(nm.sum_price) AS spend',
         'SUM(nm.views) AS views',
         'SUM(nm.clicks) AS clicks',
-        'CASE WHEN SUM(nm.clicks) = 0 THEN 0 ELSE SUM(nm.sum_price)/SUM(nm.clicks) END AS cpc',
-        'CASE WHEN SUM(nm.views) = 0 THEN 0 ELSE SUM(nm.clicks)*100.0/SUM(nm.views) END AS ctr',
         'SUM(nm.atbs) AS atbs',
         'SUM(nm.orders) AS orders',
-        'CASE WHEN SUM(nm.orders) = 0 THEN 0 ELSE SUM(nm.sum_price)/SUM(nm.orders) END AS cpo',
+
+        // вычисляемые поля
+        `CASE WHEN SUM(nm.clicks) = 0 THEN 0 ELSE SUM(nm.sum_price) / SUM(nm.clicks) END AS cpc`,
+        `CASE WHEN SUM(nm.views) = 0 THEN 0 ELSE (SUM(nm.clicks) * 100.0 / SUM(nm.views)) END AS ctr`,
+        `CASE WHEN SUM(nm.orders) = 0 THEN 0 ELSE SUM(nm.sum_price) / SUM(nm.orders) END AS cpo`,
       ])
       .where('day.date BETWEEN :startDate AND :endDate', { startDate, endDate })
       .andWhere('nm.productId = :productId', { productId })

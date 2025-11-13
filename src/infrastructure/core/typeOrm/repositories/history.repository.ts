@@ -13,54 +13,52 @@ export class HistoryRepository extends TypeOrmRepository<HistoryModel> {
     const start = DateTime.fromISO(startDate).startOf('day').toJSDate();
     const end = DateTime.fromISO(endDate).endOf('day').toJSDate();
 
-    const histories = await this.repository
-      .createQueryBuilder('history')
-      .where('history.product_id = :productId', { productId })
-      .andWhere('history.date BETWEEN :start AND :end', { start, end })
-      .orderBy('history.date', 'ASC')
-      .getMany();
+    const dailyStats = await this.repository.query(
+      `
+    SELECT 
+      DATE_TRUNC('day', h.date)::date AS date,
+      SUM(h.open_card_count)::int AS open_card_count,
+      SUM(h.add_to_card_count)::int AS add_to_card_count,
+      SUM(h.orders_count)::int AS orders_count,
+      SUM(h.order_sum_rub)::numeric AS order_sum_rub,
+      SUM(h.buy_out_count)::int AS buy_out_count,
+      SUM(h.buy_out_sum_rub)::numeric AS buy_out_sum_rub,
+      ROUND(AVG(h.buy_out_percent)::numeric, 2) AS avg_buy_out_percent,
+      ROUND(AVG(h.add_to_card_conversion)::numeric, 2) AS avg_add_to_card_conversion,
+      ROUND(AVG(h.card_to_order_conversion)::numeric, 2) AS avg_card_to_order_conversion,
+      ROUND(AVG(h.add_to_with_list)::numeric, 2) AS avg_add_to_wishlist
+    FROM history h
+    WHERE h.product_id = $1
+      AND h.date BETWEEN $2 AND $3
+    GROUP BY DATE_TRUNC('day', h.date)
+    ORDER BY DATE_TRUNC('day', h.date);
+    `,
+      [productId, start, end],
+    );
 
-    const aggregates = await this.repository
-      .createQueryBuilder('history')
-      .select('SUM(history.open_card_count)', 'totalOpenCardCount')
-      .addSelect('SUM(history.add_to_card_count)', 'totalAddToCardCount')
-      .addSelect('SUM(history.orders_count)', 'totalOrdersCount')
-      .addSelect('SUM(history.order_sum_rub)', 'totalOrderSumRub')
-      .addSelect('SUM(history.buy_out_count)', 'totalBuyOutCount')
-      .addSelect('SUM(history.buy_out_sum_rub)', 'totalBuyOutSumRub')
-      .addSelect('AVG(history.buy_out_percent)', 'avgBuyOutPercent')
-      .addSelect('AVG(history.add_to_card_conversion)', 'avgAddToCardConversion')
-      .addSelect('AVG(history.card_to_order_conversion)', 'avgCardToOrderConversion')
-      .addSelect('AVG(history.add_to_with_list)', 'avgAddToWishlist')
-      .where('history.product_id = :productId', { productId })
-      .andWhere('history.date BETWEEN :start AND :end', { start, end })
-      .getRawOne<{
-        totalopencardcount: string;
-        totaladdtocardcount: string;
-        totalorderscount: string;
-        totalordersumrub: string;
-        totalbuyoutcount: string;
-        totalbuyoutsumrub: string;
-        avgbuyoutpercent: string;
-        avgaddtocardconversion: string;
-        avgcardtoorderconversion: string;
-        avgaddtowishlist: string;
-      }>();
+    const totals = await this.repository.query(
+      `
+    SELECT 
+      SUM(h.open_card_count)::int AS total_open_card_count,
+      SUM(h.add_to_card_count)::int AS total_add_to_card_count,
+      SUM(h.orders_count)::int AS total_orders_count,
+      SUM(h.order_sum_rub)::numeric AS total_order_sum_rub,
+      SUM(h.buy_out_count)::int AS total_buy_out_count,
+      SUM(h.buy_out_sum_rub)::numeric AS total_buy_out_sum_rub,
+      ROUND(AVG(h.buy_out_percent)::numeric, 2) AS avg_buy_out_percent,
+      ROUND(AVG(h.add_to_card_conversion)::numeric, 2) AS avg_add_to_card_conversion,
+      ROUND(AVG(h.card_to_order_conversion)::numeric, 2) AS avg_card_to_order_conversion,
+      ROUND(AVG(h.add_to_with_list)::numeric, 2) AS avg_add_to_wishlist
+    FROM history h
+    WHERE h.product_id = $1
+      AND h.date BETWEEN $2 AND $3;
+    `,
+      [productId, start, end],
+    );
 
     return {
-      histories,
-      stats: {
-        totalOpenCardCount: Number(aggregates?.totalopencardcount ?? 0),
-        totalAddToCardCount: Number(aggregates?.totaladdtocardcount ?? 0),
-        totalOrdersCount: Number(aggregates?.totalorderscount ?? 0),
-        totalOrderSumRub: Number(aggregates?.totalordersumrub ?? 0),
-        totalBuyOutCount: Number(aggregates?.totalbuyoutcount ?? 0),
-        totalBuyOutSumRub: Number(aggregates?.totalbuyoutsumrub ?? 0),
-        avgBuyOutPercent: Number(aggregates?.avgbuyoutpercent ?? 0),
-        avgAddToCardConversion: Number(aggregates?.avgaddtocardconversion ?? 0),
-        avgCardToOrderConversion: Number(aggregates?.avgcardtoorderconversion ?? 0),
-        avgAddToWishlist: Number(aggregates?.avgaddtowishlist ?? 0),
-      },
+      days: dailyStats,
+      totals: totals[0] ?? {},
     };
   }
 }

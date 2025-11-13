@@ -1,4 +1,3 @@
-import { DateTime } from 'luxon';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SalesModel } from '@/infrastructure/core/typeOrm/models/sales.model';
@@ -10,54 +9,30 @@ export class SalesRepository extends TypeOrmRepository<SalesModel> {
   }
 
   async getSalesByDateRangeAndProduct(startDate: string, endDate: string, productId: number) {
-    const start = DateTime.fromISO(startDate).startOf('day').toJSDate();
-    const end = DateTime.fromISO(endDate).endOf('day').toJSDate();
+    const result = await this.repository.query(
+      `
+    WITH days AS (
+      SELECT generate_series($1::date, $2::date, interval '1 day')::date AS date
+    )
+    SELECT 
+      d.date,
+      COALESCE(SUM(s."total_price"), 0) AS total_amount,
+      COALESCE(COUNT(s.id), 0) AS total_count
+    FROM days d
+    LEFT JOIN sales s
+      ON s.product_id = $3
+     AND s.date::date <= d.date
+     AND s.date::date >= $1::date
+    GROUP BY d.date
+    ORDER BY d.date;
+    `,
+      [startDate, endDate, productId],
+    );
 
-    const qb = this.repository
-      .createQueryBuilder('sales')
-      .where('sales.product_id = :productId', { productId })
-      .andWhere('sales.date BETWEEN :start AND :end', { start, end })
-      .select([
-        'sales.id',
-        'sales.date',
-        'sales.nmId',
-        'sales.totalPrice',
-        'sales.discountPercent',
-        'sales.forPay',
-        'sales.paymentSaleAmount',
-        'sales.finishedPrice',
-        'sales.priceWithDisc',
-        'sales.isCansel',
-        'sales.cancelDate',
-        'sales.saleID',
-        'sales.warehouseName',
-        'sales.countryName',
-        'sales.regionName',
-        'sales.supplierArticle',
-        'sales.barcode',
-        'sales.incomeId',
-        'sales.spp',
-        'sales.sticker',
-        'sales.gNumber',
-        'sales.srid',
-        'sales.createdAt',
-        'sales.updatedAt',
-      ]);
-
-    const sales = await qb.getMany();
-
-    const aggregates = await this.repository
-      .createQueryBuilder('sales')
-      .select('COUNT(sales.id)', 'totalCount')
-      .addSelect('SUM(sales.total_price)', 'totalAmount')
-      .where('sales.product_id = :productId', { productId })
-      .andWhere('sales.date BETWEEN :start AND :end', { start, end })
-      .getRawOne<{ totalcount: string; totalamount: string }>();
-
-    return {
-      sales,
-      totalCount: Number(aggregates?.totalcount ?? 0),
-      totalAmount: Number(aggregates?.totalamount ?? 0),
-    };
+    return result.map((r) => ({
+      date: r.date,
+      totalAmount: Number(r.total_amount),
+      totalCount: Number(r.total_count),
+    }));
   }
 }
