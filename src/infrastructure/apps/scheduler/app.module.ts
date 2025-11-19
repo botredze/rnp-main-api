@@ -19,6 +19,7 @@ import { AdvertisingCostHistoryModel } from '@/infrastructure/core/typeOrm/model
 import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProducts.model';
 import { UnitEconomicProductMetricsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProductMetrics.model';
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
+import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedu
             UnitEconomicProductsModel,
             UnitEconomicProductMetricsModel,
             SchedularTasksModel,
+            ProductLogAndStrategyModel,
           ],
           synchronize: false,
         };

@@ -8,21 +8,17 @@ import { DeepPartial } from 'typeorm';
 import { SalesModel } from '@/infrastructure/core/typeOrm/models/sales.model';
 
 export class GetSalesExecutor extends TaskExecutor {
-
   readonly #header = {
     'Content-Type': 'application/json',
-  }
+  };
 
-  readonly #baseUrl = 'https://statistics-api.wildberries.ru/api/v1/supplier/sales'
+  readonly #baseUrl = 'https://statistics-api.wildberries.ru/api/v1/supplier/sales';
 
   #axiosService: AxiosInstance;
   readonly #productRepository: ProductRepository;
   readonly #salesRepository: SalesRepository;
 
-  constructor(
-    productRepository: ProductRepository,
-    salesRepository: SalesRepository,
-  ) {
+  constructor(productRepository: ProductRepository, salesRepository: SalesRepository) {
     super();
     this.#axiosService = axios.create();
     this.#productRepository = productRepository;
@@ -42,21 +38,20 @@ export class GetSalesExecutor extends TaskExecutor {
     this.#initAxios(apiKey);
 
     try {
-
       const dateMinus90 = DateTime.now().minus({ days: 90 }).toFormat('yyyy-MM-dd');
 
       const response = await this.#axiosService.get(`${this.#baseUrl}?dateFrom=${dateMinus90}`);
 
       const salesList: SalesDtoList = response.data;
 
-      for(const sales of salesList) {
-        const product = await this.#productRepository.findOne({where: {nmID: sales.nmId}})
+      for (const sales of salesList) {
+        const product = await this.#productRepository.findOne({ where: { nmID: sales.nmId } });
 
-        if(!product) {
-          throw Error('Product not found')
+        if (!product) {
+          throw Error('Product not found');
         }
 
-        const existingSale = await this.#salesRepository.findOne({where: {saleID: sales.saleID}})
+        const existingSale = await this.#salesRepository.findOne({ where: { saleID: sales.saleID } });
 
         const salePayload: DeepPartial<SalesModel> = {
           date: new Date(sales.date),
@@ -72,6 +67,7 @@ export class GetSalesExecutor extends TaskExecutor {
           finishedPrice: sales.finishedPrice,
           priceWithDisc: sales.priceWithDisc,
           saleID: sales.saleID,
+          isCansel: sales.saleID.startsWith('R') ? true : false,
           sticker: sales.sticker,
           gNumber: sales.gNumber,
           srid: sales.srid,
@@ -85,13 +81,13 @@ export class GetSalesExecutor extends TaskExecutor {
           productId: product.id,
         };
 
-        if(existingSale) {
-          await this.#salesRepository.updateById(existingSale.id, salePayload)
-        }else {
-          await this.#salesRepository.create(salePayload)
+        if (existingSale) {
+          await this.#salesRepository.updateById(existingSale.id, salePayload);
+        } else {
+          await this.#salesRepository.create(salePayload);
         }
       }
-    }catch (error) {
+    } catch (error) {
       console.log(error, 'error');
     }
   }

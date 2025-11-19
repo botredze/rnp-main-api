@@ -20,7 +20,7 @@
     "start:scheduler:dev": "nest start scheduler --watch",
     "start:executor": "nest start executor",
     "start:executor:dev": "nest start executor --watch",
-    "start:executor:task": "nest start executor -- --task=phone-verification-drop-executor",
+    "start:executor:task": "nest start executor -- --task=organization_init_executor",
     "dev": "npm run start:dev",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",

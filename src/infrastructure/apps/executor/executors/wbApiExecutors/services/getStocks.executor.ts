@@ -5,20 +5,17 @@ import { StocksDtoArray } from '@/infrastructure/apps/executor/executors/wbApiEx
 import { StocksModel } from '@/infrastructure/core/typeOrm/models/stocks.model';
 import { DeepPartial } from 'typeorm';
 
-
-export class GetStocksExecutor extends TaskExecutor{
+export class GetStocksExecutor extends TaskExecutor {
   readonly #header = {
     'Content-Type': 'application/json',
-  }
+  };
 
-  readonly #baseUrl = 'https://marketplace-api.wildberries.ru/api/v3/warehouses'
+  readonly #baseUrl = 'https://marketplace-api.wildberries.ru/api/v3/offices';
   readonly #stockRepository: StocksRepository;
 
   #axiosService: AxiosInstance;
 
-  constructor(
-    stockRepository: StocksRepository
-  ) {
+  constructor(stockRepository: StocksRepository) {
     super();
     this.#axiosService = axios.create();
     this.#stockRepository = stockRepository;
@@ -41,33 +38,39 @@ export class GetStocksExecutor extends TaskExecutor{
 
       const stocksList: StocksDtoArray = response.data;
 
-      if(stocksList.length === 0) {
-        throw Error('Stocks list is empty')
+      if (stocksList.length === 0) {
+        throw Error('Stocks list is empty');
       }
 
-      for(const stock of stocksList) {
-
-        const existingStock = await this.#stockRepository.findOne({where: {stockId: stock.id}})
+      for (const stock of stocksList) {
+        const existingStock = await this.#stockRepository.findOne({ where: { officeId: stock.id } });
 
         const payload: DeepPartial<StocksModel> = {
-          stockId: stock.id,
-          officeId: stock.officeId,
+          stockExternalId: stock.id,
+          stockName: stock.name,
+          address: stock.address,
+          city: stock.city,
+          longitude: stock.longitude,
+          latitude: stock.latitude,
           deliveryType: stock.deliveryType,
           cargoType: stock.cargoType,
+          federalDistrict: stock.federalDistrict,
+          selected: stock.selected,
+
+          officeId: stock.id,
           isProcessing: stock.isProcessing,
           isDeleting: stock.isDeleting,
-          stockName: stock.name,
-          organizationId
-        }
 
-        if(existingStock) {
-          await this.#stockRepository.updateById(existingStock.id, payload)
+          organizationId: organizationId,
+        };
+
+        if (existingStock) {
+          await this.#stockRepository.updateById(existingStock.id, payload);
         } else {
-          await this.#stockRepository.create(payload)
+          await this.#stockRepository.create(payload);
         }
       }
-
-    }catch (error) {
+    } catch (error) {
       console.log(error);
     }
   }

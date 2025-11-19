@@ -1,19 +1,18 @@
 import {
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  Column,
-  ManyToOne,
   BeforeInsert,
   BeforeUpdate,
+  Column,
+  CreateDateColumn,
+  Entity,
   JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 
-@Entity({ name: "orders" })
+@Entity({ name: 'orders' })
 export class OrderModel {
-
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -68,7 +67,7 @@ export class OrderModel {
   @Column({ name: 'is_realization' })
   isRealization: boolean;
 
-  @Column({ type: 'decimal' })
+  @Column({ type: 'decimal', name: 'total_price', precision: 10, scale: 2 })
   totalPrice: number;
 
   @Column({ type: 'decimal', name: 'discount_percent', nullable: true })
@@ -98,15 +97,14 @@ export class OrderModel {
   @Column({ name: 'srid', nullable: true })
   srid: string;
 
-
-  @UpdateDateColumn({ name: "updated_at" })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @ManyToOne(() => ProductsModel, product => product.orders)
-  @JoinColumn({name : 'product_id'})
+  @ManyToOne(() => ProductsModel, (product) => product.orders)
+  @JoinColumn({ name: 'product_id' })
   product: ProductsModel;
 
   @Column({ name: 'product_id' })
@@ -123,9 +121,7 @@ export class OrderModel {
     this.updatedAt = new Date();
   }
 
-
   constructor(params: Partial<OrderModel> = {}) {
     Object.assign(this, params);
   }
-
 }

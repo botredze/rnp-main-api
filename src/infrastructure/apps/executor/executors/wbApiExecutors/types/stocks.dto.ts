@@ -1,9 +1,15 @@
 export interface StocksDto {
-  name: string;
-  officeId: number;
-  id: number;
-  cargoType: number;
-  deliveryType: number;
+  id: number; // внешний id склада
+  name: string; // название ("Коледино")
+  address: string; // строковый адрес
+  city: string; // "Москва"
+  longitude: number; // координата
+  latitude: number; // координата
+  cargoType: number; // тип груза
+  deliveryType: number; // тип доставки
+  federalDistrict: string; // "Центральный"
+  selected: boolean; // выбран ли склад
+
   isDeleting: boolean;
   isProcessing: boolean;
 }

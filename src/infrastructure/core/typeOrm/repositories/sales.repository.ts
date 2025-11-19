@@ -16,7 +16,7 @@ export class SalesRepository extends TypeOrmRepository<SalesModel> {
     )
     SELECT 
       d.date,
-      COALESCE(SUM(s."total_price"), 0) AS total_amount,
+      COALESCE(SUM(s.total_price), 0) AS total_amount,
       COALESCE(COUNT(s.id), 0) AS total_count
     FROM days d
     LEFT JOIN sales s

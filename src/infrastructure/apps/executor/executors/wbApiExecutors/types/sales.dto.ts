@@ -29,4 +29,4 @@ export interface SalesItemDto {
   srid: string;
 }
 
-export type SalesDtoList = SalesItemDto[];
+export type SalesDtoList = Array<SalesItemDto>;

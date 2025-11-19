@@ -18,6 +18,7 @@ import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertisi
 import { AdvertisingDayStatisticModel } from '@/infrastructure/core/typeOrm/models/advertisingDayStatistic.model';
 import { AdvertisingDayAppModel } from '@/infrastructure/core/typeOrm/models/adverstingDayApps.model';
 import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/advestingDayAppsNms.model';
+import { AnalyticsRepository } from '@/infrastructure/core/typeOrm/repositories/analitycs.repository';
 
 @Module({
   imports: [
@@ -42,32 +43,13 @@ import { AdvertisingDayAppNmModel } from '@/infrastructure/core/typeOrm/models/a
     HistoryRepository,
     StockCountRepository,
     AdvestingDayStatisticRepository,
+    AnalyticsRepository,
+
     {
       provide: RnpUseCase,
-      useFactory: (
-        productRepository: ProductRepository,
-        salesRepository: SalesRepository,
-        orderRepository: OrderRepository,
-        historyRepository: HistoryRepository,
-        stockCountRepository: StockCountRepository,
-        advestingDayStatisticRepository: AdvestingDayStatisticRepository,
-      ) =>
-        new RnpUseCase(
-          productRepository,
-          salesRepository,
-          orderRepository,
-          historyRepository,
-          stockCountRepository,
-          advestingDayStatisticRepository,
-        ),
-      inject: [
-        ProductRepository,
-        SalesRepository,
-        OrderRepository,
-        HistoryRepository,
-        StockCountRepository,
-        AdvestingDayStatisticRepository,
-      ],
+      useFactory: (productRepository: ProductRepository, analyticsRepository: AnalyticsRepository) =>
+        new RnpUseCase(productRepository, analyticsRepository),
+      inject: [ProductRepository, AnalyticsRepository],
     },
   ],
 })

@@ -70,16 +70,17 @@ export class GetStockReportExecutor extends TaskExecutor {
     this.#initAxios(apiKey);
 
     try {
-      const dateTo = DateTime.now().minus({ days: 1 }).toFormat('yyyy-MM-dd');
+      const dateTo = DateTime.now().minus({ days: 28 }).toFormat('yyyy-MM-dd');
 
-      const dateFrom = DateTime.now().minus({ days: 7 }).toFormat('yyyy-MM-dd');
+      const dateFrom = DateTime.now().minus({ days: 30 }).toFormat('yyyy-MM-dd');
 
-      const createTaskResponse = await this.#axiosService.post(
-        `${this.#createTask}?dateFrom=${dateFrom}&dateTo=${dateTo}?`,
+      const createTaskResponse = await this.#axiosService.get(
+        `${this.#createTask}?dateFrom=${dateFrom}&dateTo=${dateTo}`,
       );
 
       if (createTaskResponse.status === 200) {
-        const taskId = createTaskResponse.data?.data?.id;
+        const taskId = createTaskResponse.data?.data?.taskId;
+
         const checkTaskStatus = await this.waitForTaskDone(taskId);
 
         if (checkTaskStatus) {
@@ -90,14 +91,14 @@ export class GetStockReportExecutor extends TaskExecutor {
 
             for (const stockData of stockReport) {
               const existData = await this.#stockCountRepository.findOne({
-                where: { date: new Date(stockData.date), nmId: stockData.nmId },
+                where: { date: new Date(stockData.date), barcode: stockData.barcode },
               });
 
               const stock = await this.#stocksRepository.findOne({ where: { officeId: stockData.officeId } });
               const product = await this.#productRepository.findOne({ where: { nmID: stockData.nmId } });
 
-              if (!product || !stock) {
-                throw Error('Product or stock not found');
+              if (!product) {
+                console.log('stockData not fined', stockData.nmId);
               }
 
               const savePayload = new StockCountModel({
@@ -108,7 +109,8 @@ export class GetStockReportExecutor extends TaskExecutor {
                 supplierArticle: stockData.vendorCode ?? null,
                 nmId: stockData.nmId,
                 barcode: stockData.barcode ?? null,
-                quantity: Number(stockData.volume) || 0,
+                stockCount: stockData.barcodesCount || 0,
+                quantity: Number(stockData.barcodesCount) || 0,
                 category: stockData.subject ?? null,
                 subject: stockData.subject ?? null,
                 brand: stockData.brand ?? null,
