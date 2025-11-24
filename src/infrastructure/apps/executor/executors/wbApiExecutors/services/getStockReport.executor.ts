@@ -70,9 +70,9 @@ export class GetStockReportExecutor extends TaskExecutor {
     this.#initAxios(apiKey);
 
     try {
-      const dateTo = DateTime.now().minus({ days: 28 }).toFormat('yyyy-MM-dd');
+      const dateTo = DateTime.now().minus({ days: 1 }).toFormat('yyyy-MM-dd');
 
-      const dateFrom = DateTime.now().minus({ days: 30 }).toFormat('yyyy-MM-dd');
+      const dateFrom = DateTime.now().minus({ days: 7 }).toFormat('yyyy-MM-dd');
 
       const createTaskResponse = await this.#axiosService.get(
         `${this.#createTask}?dateFrom=${dateFrom}&dateTo=${dateTo}`,

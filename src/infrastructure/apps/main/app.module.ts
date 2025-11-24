@@ -28,6 +28,7 @@ import { JwtService } from '@/infrastructure/services/jwtService/jwt.service';
 import { RnpStatisticModule } from '@/infrastructure/apps/main/modules/rnp-statistic/rnp-statistic.module';
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
+import { UserModule } from '@/infrastructure/apps/main/modules/users/user.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models
     AuthModule,
     OrganizationModule,
     RnpStatisticModule,
+    UserModule,
   ],
   controllers: [],
   providers: [
