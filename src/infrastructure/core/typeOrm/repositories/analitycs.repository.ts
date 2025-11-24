@@ -150,6 +150,17 @@ export class AnalyticsRepository {
       ORDER BY d.date ASC;
     `;
 
-    return this.dataSource.query(query, [startDate, endDate, productId]);
+    const result = await this.dataSource.query(query, [startDate, endDate, productId]);
+
+    const hasNonZero = result.some((row) =>
+      Object.values(row).some((value) => typeof value === 'number' && value !== 0),
+    );
+
+    console.log(hasNonZero, 'hasNonZero');
+    if (!hasNonZero) {
+      return [];
+    } else {
+      return result;
+    }
   }
 }

@@ -1,8 +1,6 @@
 import { IsNumber, IsString } from 'class-validator';
 
-
 export class CreateOrganizationDto {
-
   @IsString()
   organizationName: string;
 
@@ -27,4 +25,8 @@ export class GetUserOrganizationsDto {
   constructor(params: Partial<GetUserOrganizationsDto> = {}) {
     Object.assign(this, params);
   }
+}
+
+export class UpdateOrganizationDto extends CreateOrganizationDto {
+  id: number;
 }
