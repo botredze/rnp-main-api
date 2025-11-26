@@ -17,3 +17,12 @@ export interface OrderBy {
   field?: string;
   order?: 'ASC' | 'DESC';
 }
+
+export interface UpdateUserDto extends Partial<UserDto> {
+  id: number;
+}
+
+export interface DeactiveUser {
+  userId: number;
+  status: 'delete' | 'diactive';
+}

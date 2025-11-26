@@ -1,5 +1,5 @@
 import { UserRepository } from '@/infrastructure/core/typeOrm/repositories/user.repository';
-import { GetUserDto, UserDto } from '@/shared/dtos/user.dto';
+import { DeactiveUser, GetUserDto, UpdateUserDto, UserDto } from '@/shared/dtos/user.dto';
 import { UserModel, UserStatus } from '@/infrastructure/core/typeOrm/models/user.model';
 
 export class UsersUseCase {
@@ -50,7 +50,31 @@ export class UsersUseCase {
     return await this.#usersRepository.create(createPayload);
   }
 
-  async updateUser(id: number, body: UserDto) {}
+  async updateUser(body: UpdateUserDto) {
+    const { id, fio, role, password, login } = body;
+    const existingUser = await this.#usersRepository.findOne({ where: { id: Number(id) } });
 
-  async diactiveUsers() {}
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
+
+    const updatePayload = new UserModel({ fio, role, password, login });
+    return await this.#usersRepository.updateById(Number(id), updatePayload);
+  }
+
+  async diactiveUsers(query: DeactiveUser) {
+    const { userId, status } = query;
+
+    const existingUser = await this.#usersRepository.findOne({ where: { id: Number(userId) } });
+
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
+
+    if (status === 'delete') {
+      return await this.#usersRepository.updateById(Number(userId), { status: UserStatus.Deleted });
+    } else if (status === 'diactive') {
+      return await this.#usersRepository.updateById(Number(userId), { status: UserStatus.INACTIVE });
+    }
+  }
 }

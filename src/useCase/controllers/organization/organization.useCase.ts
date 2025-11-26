@@ -2,13 +2,23 @@ import { OrganizationRepository } from '@/infrastructure/core/typeOrm/repositori
 import { UserRepository } from '@/infrastructure/core/typeOrm/repositories/user.repository';
 import { CreateOrganizationDto, GetUserOrganizationsDto, UpdateOrganizationDto } from '@/shared/dtos/organization.dto';
 import { OrganizationsModel, OrganizationStatuses } from '@/infrastructure/core/typeOrm/models/organizations.model';
+import { DateTime } from 'luxon';
+import { SchedulerRepository } from '@/infrastructure/core/typeOrm/repositories/scheduler.repository';
+import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
 
 export class OrganizationUseCase {
   readonly #organizationRepository: OrganizationRepository;
   readonly #userRepository: UserRepository;
+  readonly #schedularRepository: SchedulerRepository;
 
-  constructor(organizationRepository: OrganizationRepository) {
+  constructor(
+    organizationRepository: OrganizationRepository,
+    userRepository: UserRepository,
+    schedulerRepository: SchedulerRepository,
+  ) {
     this.#organizationRepository = organizationRepository;
+    this.#userRepository = userRepository;
+    this.#schedularRepository = schedulerRepository;
   }
 
   async getList(userId: number) {
@@ -22,6 +32,7 @@ export class OrganizationUseCase {
   }
 
   async createOrganization(query: CreateOrganizationDto) {
+    console.log(query, 'query');
     const { organizationName, userId, apiKey } = query;
 
     const user = await this.#userRepository.findOne({ where: { id: userId } });
@@ -34,9 +45,16 @@ export class OrganizationUseCase {
       organizationName,
       userId,
       apiKey,
+      createdDate: new Date(),
+      paymentDate: DateTime.now().plus({ days: 30 }).toJSDate(),
     });
 
     const organization = await this.#organizationRepository.create(organizationPayload);
+
+    if (organization) {
+      const taskPayload = new SchedularTasksModel({});
+      this.#schedularRepository.create(taskPayload);
+    }
     return organization;
   }
 
@@ -54,6 +72,11 @@ export class OrganizationUseCase {
     });
 
     const result = await this.#organizationRepository.updateById(id, payload);
+
+    if (result) {
+      const taskPayload = new SchedularTasksModel({});
+      this.#schedularRepository.create(taskPayload);
+    }
 
     return result;
   }

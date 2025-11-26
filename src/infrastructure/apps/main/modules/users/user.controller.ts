@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Put, Query } from '@nestjs/common';
-import { GetUserDto, UserDto } from '@/shared/dtos/user.dto';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { DeactiveUser, GetUserDto, UpdateUserDto, UserDto } from '@/shared/dtos/user.dto';
 import { UsersUseCase } from '@/useCase/controllers/users/users.useCase';
 
 @Controller('api/users')
@@ -15,14 +15,18 @@ export class UserController {
     return this.#userUseCase.getList(query);
   }
 
-  @Get(':id')
-  async getById() {}
+  @Get('deactivate')
+  async diactivateUser(@Query() query: DeactiveUser) {
+    return this.#userUseCase.diactiveUsers(query);
+  }
 
   @Post('create')
   async create(@Body() body: UserDto) {
     return this.#userUseCase.createUser(body);
   }
 
-  @Put(':id')
-  async updateById() {}
+  @Post('update')
+  async updateUser(@Body() body: UpdateUserDto) {
+    return await this.#userUseCase.updateUser(body);
+  }
 }

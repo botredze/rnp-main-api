@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { OrganizationUseCase } from '@/useCase/controllers/organization/organization.useCase';
 import { Request } from 'express';
 import { CreateOrganizationDto, GetUserOrganizationsDto, UpdateOrganizationDto } from '@/shared/dtos/organization.dto';
@@ -14,10 +14,21 @@ export class OrganizationController {
   @Post('create')
   async create(@Body() body: CreateOrganizationDto, @Req() req: Request) {
     const { user } = req;
+    const { userId } = body;
+
+    console.log(user, 'user');
+    console.log(userId, 'userId');
+
     const query = {
-      userId: user.id,
       ...body,
     };
+
+    if (userId) {
+      query.userId = userId;
+    } else {
+      query.userId = user.id;
+    }
+
     return this.#ogranizationUseCase.createOrganization(query);
   }
 
@@ -38,11 +49,12 @@ export class OrganizationController {
     return await this.#ogranizationUseCase.getList(params.userId);
   }
 
-  @Put('update')
+  @Post('update')
   async update(@Body() body: UpdateOrganizationDto) {
     return await this.#ogranizationUseCase.updateOrganization(body);
   }
 
+  @Get('deactivate')
   async diactivateOrganization(@Query() query: GetUserOrganizationsDto) {
     return await this.#ogranizationUseCase.diactivateOrganization(query);
   }

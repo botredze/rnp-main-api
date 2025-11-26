@@ -57,12 +57,6 @@ export class OrganizationsModel {
   @Column({ name: 'status', type: 'enum', enum: OrganizationStatuses, default: OrganizationStatuses.Inited })
   status: OrganizationStatuses;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
   @ManyToOne(() => UserModel, (user) => user.organizations)
   @JoinColumn({ name: 'user_id' })
   user?: UserModel;
@@ -83,6 +77,12 @@ export class OrganizationsModel {
 
   @OneToMany(() => AdvertisingModel, (ad) => ad.organization)
   advertisements: Array<AdvertisingModel>;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
   @BeforeInsert()
   setTimestampsOnInsert() {
