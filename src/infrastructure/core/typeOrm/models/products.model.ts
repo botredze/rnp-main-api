@@ -19,6 +19,7 @@ import { HistoryModel } from '@/infrastructure/core/typeOrm/models/history.model
 import { StockCountModel } from '@/infrastructure/core/typeOrm/models/stockCount.model';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
+import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
 
 @Entity({ name: 'products' })
 export class ProductsModel {
@@ -74,6 +75,9 @@ export class ProductsModel {
   @OneToMany(() => ProductLogAndStrategyModel, (metric) => metric.product)
   metrics?: Array<ProductLogAndStrategyModel>;
 
+  @OneToMany(() => SalePlanSettingsModel, (salePlan) => salePlan.product)
+  salePlan?: Array<SalePlanSettingsModel>;
+
   @ManyToMany(() => AdvertisingModel, (ad) => ad.products)
   @JoinTable({ name: 'product_advertising' })
   advertisements?: Array<AdvertisingModel>;
@@ -94,6 +98,8 @@ export class ProductsModel {
   setTimestampsOnUpdate() {
     this.updatedAt = new Date();
   }
+
+  metricsCalculated?: any;
 
   constructor(params: Partial<ProductsModel> = {}) {
     Object.assign(this, params);

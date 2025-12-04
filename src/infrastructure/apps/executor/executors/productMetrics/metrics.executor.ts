@@ -18,11 +18,11 @@ export class MetricsExecutor extends TaskExecutor {
 
     for (const product of productList) {
       const payload = new ProductLogAndStrategyModel({
-        strategy: '',
-        log: '',
-        salePlan: 0,
-        date: new Date(),
-        productId: product.id,
+        // strategy: '',
+        // log: '',
+        // salePlan: 0,
+        // date: new Date(),
+        // productId: product.id,
       });
 
       await this.#metricsRepository.create(payload);

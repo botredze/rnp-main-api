@@ -24,7 +24,7 @@ import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/sto
 import { ConfigService } from '@nestjs/config';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
 
-export class WbControllerExecutor extends TaskExecutor {
+export class WbDailyControllerExecutor extends TaskExecutor {
   readonly #configService: ConfigService;
   readonly #organizationRepository: OrganizationRepository;
   readonly #advertInfoRepository: AdvertInfoRepository;
@@ -113,11 +113,11 @@ export class WbControllerExecutor extends TaskExecutor {
   }
 
   async execute() {
-    const initialOrganizations = await this.#organizationRepository.findMany({
-      where: { status: OrganizationStatuses.Inited },
+    const activeOrganizations = await this.#organizationRepository.findMany({
+      where: { status: OrganizationStatuses.Active },
     });
 
-    for (const organization of initialOrganizations) {
+    for (const organization of activeOrganizations) {
       const { apiKey, id, organizationName } = organization;
 
       if (apiKey && id) {

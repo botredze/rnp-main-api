@@ -8,6 +8,7 @@ import { UserRepository } from '@/infrastructure/core/typeOrm/repositories/user.
 import { UserModel } from '@/infrastructure/core/typeOrm/models/user.model';
 import { SchedulerRepository } from '@/infrastructure/core/typeOrm/repositories/scheduler.repository';
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Module({
   imports: [TypeOrmModule.forFeature([OrganizationsModel, UserModel, SchedularTasksModel])],
@@ -22,8 +23,9 @@ import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedu
         organizationRepository: OrganizationRepository,
         userRepository: UserRepository,
         schedularRepository: SchedulerRepository,
-      ) => new OrganizationUseCase(organizationRepository, userRepository, schedularRepository),
-      inject: [OrganizationRepository, UserRepository, SchedulerRepository],
+        eventEmitter: EventEmitter2,
+      ) => new OrganizationUseCase(organizationRepository, userRepository, schedularRepository, eventEmitter),
+      inject: [OrganizationRepository, UserRepository, SchedulerRepository, EventEmitter2],
     },
   ],
 })

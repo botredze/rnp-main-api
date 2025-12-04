@@ -15,7 +15,7 @@ async function bootstrap() {
   const keepAliveTimeout = 60;
 
   app.enableCors({
-    origin: 'true',
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',

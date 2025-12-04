@@ -1,6 +1,7 @@
 import { UserRepository } from '@/infrastructure/core/typeOrm/repositories/user.repository';
 import { DeactiveUser, GetUserDto, UpdateUserDto, UserDto } from '@/shared/dtos/user.dto';
 import { UserModel, UserStatus } from '@/infrastructure/core/typeOrm/models/user.model';
+import { Not } from 'typeorm';
 
 export class UsersUseCase {
   readonly #usersRepository: UserRepository;
@@ -13,24 +14,25 @@ export class UsersUseCase {
     console.log(query, 'query');
     const { role, status, orderBy } = query;
 
-    let where: any = {};
-    let order: any = undefined;
+    let where: any = {
+      status: status ? status : undefined,
+    };
+
+    if (!status) {
+      where.status = Not(UserStatus.Deleted);
+    }
 
     if (role) {
       where = { ...where, role };
     }
 
-    if (status) {
-      where = { ...where, status };
-    }
-
+    let order: any = undefined;
     if (orderBy?.field) {
       order = {
         [orderBy.field]: orderBy.order || 'ASC',
       };
     }
 
-    console.log(where, 'where');
     const users = await this.#usersRepository.findMany({
       where,
       order,
@@ -63,18 +65,19 @@ export class UsersUseCase {
   }
 
   async diactiveUsers(query: DeactiveUser) {
+    console.log(query, 'query');
     const { userId, status } = query;
 
-    const existingUser = await this.#usersRepository.findOne({ where: { id: Number(userId) } });
+    const existingUser = await this.#usersRepository.findOne({ where: { id: userId } });
 
     if (!existingUser) {
       throw new Error('User not found');
     }
 
     if (status === 'delete') {
-      return await this.#usersRepository.updateById(Number(userId), { status: UserStatus.Deleted });
+      return await this.#usersRepository.updateById(userId, { status: UserStatus.Deleted });
     } else if (status === 'diactive') {
-      return await this.#usersRepository.updateById(Number(userId), { status: UserStatus.INACTIVE });
+      return await this.#usersRepository.updateById(userId, { status: UserStatus.INACTIVE });
     }
   }
 }

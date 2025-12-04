@@ -29,6 +29,8 @@ import { RnpStatisticModule } from '@/infrastructure/apps/main/modules/rnp-stati
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 import { UserModule } from '@/infrastructure/apps/main/modules/users/user.module';
+import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
+import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
 
 @Module({
   imports: [
@@ -77,6 +79,8 @@ import { UserModule } from '@/infrastructure/apps/main/modules/users/user.module
             UnitEconomicProductMetricsModel,
             SchedularTasksModel,
             ProductLogAndStrategyModel,
+            SalePlanSettingsModel,
+            NotesModel,
           ],
           synchronize: true,
           logging: dbDebug,

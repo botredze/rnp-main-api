@@ -6,29 +6,26 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
-import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
 
-@Entity({ name: 'product_log_and_strategy' })
-export class ProductLogAndStrategyModel {
+@Entity({ name: 'sale_plan_settings' })
+export class SalePlanSettingsModel {
   @PrimaryGeneratedColumn({ name: 'id' })
   id?: number;
 
-  @Column({ name: 'date', type: 'date' })
-  date: Date;
+  @Column({ name: 'start_period', nullable: true, type: 'date' })
+  startPeriod: Date;
 
-  // Связь с заметками
-  @OneToMany(() => NotesModel, (note) => note.productLogAndStrategy, { cascade: true })
-  notes: Array<NotesModel>;
+  @Column({ name: 'endPeriod', nullable: true, type: 'date' })
+  endPeriod: Date;
 
-  @Column({ name: 'sale_plan', type: 'int', nullable: true })
-  salePlan: number;
+  @Column({ name: 'saleCounts', nullable: true, default: 0 })
+  saleCounts: number;
 
-  @ManyToOne(() => ProductsModel, (product) => product.metrics)
+  @ManyToOne(() => ProductsModel, (product) => product.salePlan)
   @JoinColumn({ name: 'product_id' })
   product: ProductsModel;
 
@@ -52,7 +49,7 @@ export class ProductLogAndStrategyModel {
     this.updatedAt = new Date();
   }
 
-  constructor(params: Partial<ProductLogAndStrategyModel> = {}) {
+  constructor(params: Partial<SalePlanSettingsModel> = {}) {
     Object.assign(this, params);
   }
 }

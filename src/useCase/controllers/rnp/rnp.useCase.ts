@@ -18,10 +18,18 @@ export class RnpUseCase {
   async getList(query: GetProductListQuery) {
     const { organizationId } = query;
 
-    const products = await this.#productRepository.findMany({ where: { organizationId } });
+    const products = await this.#productRepository.findMany({
+      where: { organizationId },
+    });
 
     if (products.length === 0) {
       return [];
+    }
+
+    for (const product of products) {
+      const metrics = await this.#analyticsRepository.getProductByIdMetric(product.id);
+
+      product.metricsCalculated = metrics;
     }
 
     return products.map((product) => ({
@@ -29,6 +37,8 @@ export class RnpUseCase {
       characteristics: parseJson(product.characteristics),
       sizes: parseJson(product.sizes),
       photos: parseJson(product.photos),
+
+      metricsCalculated: product.metricsCalculated,
     }));
   }
 

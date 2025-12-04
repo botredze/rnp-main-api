@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ScheduledTasksService } from '../scheduledTasks/scheduledTasks.service';
 import { CronService } from '../cron/cron.service';
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
+import { OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit {
@@ -15,6 +16,12 @@ export class SchedulerService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    await this.scheduleTasks();
+  }
+
+  @OnEvent('schedular.tasks.updated')
+  async reloadTasks() {
+    console.log('task create');
     await this.scheduleTasks();
   }
 

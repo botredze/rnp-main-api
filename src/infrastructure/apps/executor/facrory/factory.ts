@@ -18,9 +18,9 @@ import { SalesRepository } from '@/infrastructure/core/typeOrm/repositories/sale
 import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/stocks.repository';
 import { WbControllerExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/wbController.executor';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
-import { MetricsExecutor } from '@/infrastructure/apps/executor/executors/productMetrics/metrics.executor';
 import { ProductMetricsRepository } from '@/infrastructure/core/typeOrm/repositories/productMetrics.repository';
-import { GetStockCountTodayExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockCountToday.executor';
+import { WbDailyControllerExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/wbDailyController.executor';
+import { MetricsExecutor } from '@/infrastructure/apps/executor/executors/productMetrics/metrics.executor';
 
 @Injectable()
 export class TaskExecutorFactory {
@@ -44,10 +44,37 @@ export class TaskExecutorFactory {
   ) {}
 
   create(taskName: TaskName): TaskExecutor {
-    console.log(taskName, 'taskName');
+    console.log(
+      taskName.startsWith(TaskName.OrganizationInitExecutor),
+      'taskName.startsWith(TaskName.OrganizationInitExecutor',
+    );
+
+    console.log(taskName, 'tackName');
+    if (taskName.startsWith(TaskName.OrganizationInitExecutor)) {
+      const parts = taskName.split(':');
+      const orgId = parts[1] ? Number(parts[1]) : null;
+
+      console.log(orgId, 'orgId');
+      return new WbControllerExecutor(
+        this.organizationRepository,
+        this.advertInfoRepository,
+        this.advertDayStatisticRepository,
+        this.advertDayAppsRepository,
+        this.advertDayAppsNmsRepository,
+        this.productRepository,
+        this.advertingCostHistoryRepository,
+        this.orderRepository,
+        this.productStatsRepository,
+        this.salesRepository,
+        this.stockRepository,
+        this.configService,
+        this.stockCountRepository,
+      );
+    }
+
     switch (taskName) {
-      case TaskName.OrganizationInitExecutor:
-        return new WbControllerExecutor(
+      case TaskName.UpdateOrganizationInfo:
+        return new WbDailyControllerExecutor(
           this.organizationRepository,
           this.advertInfoRepository,
           this.advertDayStatisticRepository,
@@ -66,12 +93,6 @@ export class TaskExecutorFactory {
       case TaskName.CreateProductLogs:
         return new MetricsExecutor(this.productRepository, this.productMetricsRepository);
 
-      case TaskName.GetStockCount:
-        return new GetStockCountTodayExecutor(
-          this.stockCountRepository,
-          this.productRepository,
-          this.organizationRepository,
-        );
       default:
         throw new Error(`No executor found for task: ${taskName}`);
     }

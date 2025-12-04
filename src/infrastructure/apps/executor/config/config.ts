@@ -7,6 +7,7 @@ export enum TaskName {
   OrganizationInitExecutor = 'organization_init_executor',
   CreateProductLogs = 'create_product_logs',
   GetStockCount = 'get_stock_count',
+  UpdateOrganizationInfo = 'update_organization_info',
 }
 
 export const TASK_STATUS = {

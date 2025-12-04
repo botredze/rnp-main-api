@@ -122,7 +122,7 @@ export class GetProductStatisticExecutor extends TaskExecutor {
     try {
       const idReport = uuidv4();
 
-      const endDate = DateTime.now(); // сегодня
+      const endDate = DateTime.now().minus({ day: 1 }); // сегодня
       const startDate = endDate.minus({ months: 3 }); // 3 месяца назад
 
       const reportParams = {
@@ -136,6 +136,8 @@ export class GetProductStatisticExecutor extends TaskExecutor {
         aggregationLevel: 'day',
         skipDeletedNm: false,
       };
+
+      console.log(reportParams, 'reportParams');
       const createReportReposonse = await this.#axiosService.post(this.#createReport, reportParams);
 
       if (createReportReposonse.status === 200) {
