@@ -20,6 +20,8 @@ import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/
 import { UnitEconomicProductMetricsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProductMetrics.model';
 import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedularTasks.model';
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
+import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
+import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
 
 @Module({
   imports: [
@@ -64,6 +66,8 @@ import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models
             UnitEconomicProductMetricsModel,
             SchedularTasksModel,
             ProductLogAndStrategyModel,
+            SalePlanSettingsModel,
+            NotesModel,
           ],
           synchronize: false,
         };
