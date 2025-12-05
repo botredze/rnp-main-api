@@ -66,13 +66,9 @@ export class GetStockReportExecutor extends TaskExecutor {
     }
   }
 
-  async execute(apiKey: string): Promise<void> {
-    this.#initAxios(apiKey);
-
+  async processWeeklyReport(dateFrom: string, dateTo: string): Promise<void> {
     try {
-      const dateTo = DateTime.now().minus({ days: 1 }).toFormat('yyyy-MM-dd');
-
-      const dateFrom = DateTime.now().minus({ days: 7 }).toFormat('yyyy-MM-dd');
+      console.log(`Обработка периода: ${dateFrom} - ${dateTo}`);
 
       const createTaskResponse = await this.#axiosService.get(
         `${this.#createTask}?dateFrom=${dateFrom}&dateTo=${dateTo}`,
@@ -134,6 +130,30 @@ export class GetStockReportExecutor extends TaskExecutor {
           }
         }
       }
+    } catch (error) {
+      console.error(`Ошибка при обработке периода ${dateFrom} - ${dateTo}:`, error);
+      throw error;
+    }
+  }
+
+  async execute(apiKey: string): Promise<void> {
+    this.#initAxios(apiKey);
+
+    try {
+      const today = DateTime.now().minus({ days: 1 });
+
+      for (let i = 0; i < 4; i++) {
+        const dateTo = today.minus({ days: i * 7 }).toFormat('yyyy-MM-dd');
+        const dateFrom = today.minus({ days: (i + 1) * 7 }).toFormat('yyyy-MM-dd');
+
+        await this.processWeeklyReport(dateFrom, dateTo);
+
+        if (i < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 60000));
+        }
+      }
+
+      console.log('Все 4 недельных отчета успешно обработаны');
     } catch (error) {
       console.log(error, 'error');
     }

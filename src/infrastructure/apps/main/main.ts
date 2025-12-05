@@ -21,11 +21,13 @@ async function bootstrap() {
       'Content-Type',
       'Authorization',
       'client_id',
+      'x-user',
       'Cache-Control',
       'X-Requested-With',
       'Accept',
       'Origin',
     ],
+    credentials: false,
   });
 
   app.use((req, res, next) => {
@@ -39,26 +41,9 @@ async function bootstrap() {
     next();
   });
 
-  //
-  // app.enableCors({
-  //   origin: ['http://localhost:5173/'],
-  //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  //   allowedHeaders: [
-  //     'Content-Type',
-  //     'Authorization',
-  //     'client_id',
-  //     'Cache-Control',
-  //     'X-Requested-With',
-  //     'Accept',
-  //     'Origin',
-  //   ],
-  //   exposedHeaders: ['Content-Type', 'Cache-Control', 'Connection', 'Transfer-Encoding'],
-  //   credentials: false,
-  // });
-
-  // server.keepAliveTimeout = keepAliveTimeout * 1000;
-  // server.headersTimeout = keepAliveTimeout * 1000;
-  // server.setTimeout(30 * 1000);
+  server.keepAliveTimeout = keepAliveTimeout * 1000;
+  server.headersTimeout = keepAliveTimeout * 1000;
+  server.setTimeout(30 * 1000);
 
   app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
 

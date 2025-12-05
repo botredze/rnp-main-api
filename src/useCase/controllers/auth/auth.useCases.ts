@@ -12,7 +12,6 @@ export class AuthUseCases {
   }
 
   async login(query: AuthDto) {
-    console.log(query, 'query');
     const { login, password } = query;
 
     const user = await this.#userRepository.findOne({
@@ -23,11 +22,13 @@ export class AuthUseCases {
       throw new Error('User not found or invalid password');
     }
 
-    const payload = { id: user.id, login: user.login };
+    const payload = { id: user.id, login: user.login, role: user.role };
     const token = this.#jwtService.signAccessToken(payload);
 
     return {
       id: user.id,
+      user: user.login,
+      role: user.role,
       token,
     };
   }
