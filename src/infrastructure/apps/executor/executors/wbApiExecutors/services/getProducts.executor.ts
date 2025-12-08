@@ -10,14 +10,12 @@ export class GetProductsExecutor extends TaskExecutor {
   readonly #header = {
     'Content-Type': 'application/json',
   };
-  readonly #baseUrl = 'https://content-api.wildberries.ru/content/v2/get/cards/list'
+  readonly #baseUrl = 'https://content-api.wildberries.ru/content/v2/get/cards/list';
 
   #axiosService: AxiosInstance;
   readonly #productRepository: ProductRepository;
 
-  constructor(
-    productRepository: ProductRepository
-  ) {
+  constructor(productRepository: ProductRepository) {
     super();
     this.#axiosService = axios.create();
     this.#productRepository = productRepository;
@@ -53,13 +51,13 @@ export class GetProductsExecutor extends TaskExecutor {
               objectIDs: [],
               brands: [],
               imtID: 0,
-              withPhoto: -1
+              withPhoto: -1,
             },
             cursor: {
               nmID: nmIDCursor,
-              limit
-            }
-          }
+              limit,
+            },
+          },
         };
 
         const response = await this.#axiosService.post<ProductDto>(this.#baseUrl, body);
@@ -83,12 +81,12 @@ export class GetProductsExecutor extends TaskExecutor {
       console.log(`Всего получено товаров: ${allProducts.length}`);
 
       for (const cart of allProducts) {
-        const existProduct = await this.#productRepository.exist({nmID: cart.nmID})
+        const existProduct = await this.#productRepository.exist({ nmID: cart.nmID, organizationId });
 
         if (existProduct) {
-          const existingProduct = await  this.#productRepository.findOne({where: {nmID: cart.nmID}})
+          const existingProduct = await this.#productRepository.findOne({ where: { nmID: cart.nmID } });
 
-          const {id: productId } = existingProduct
+          const { id: productId } = existingProduct;
 
           const updatedProductPayload: DeepPartial<ProductsModel> = {
             nmID: cart.nmID,
@@ -100,11 +98,10 @@ export class GetProductsExecutor extends TaskExecutor {
             characteristics: stringifyJson(cart.characteristics),
             sizes: stringifyJson(cart.sizes),
             photos: stringifyJson(cart.photos),
-            organizationId
-          }
-          await this.#productRepository.updateById(productId, updatedProductPayload)
-
-        }else {
+            organizationId,
+          };
+          await this.#productRepository.updateById(productId, updatedProductPayload);
+        } else {
           const newProductPayload: DeepPartial<ProductsModel> = {
             nmID: cart.nmID,
             sku: cart.nmUUID,
@@ -115,12 +112,11 @@ export class GetProductsExecutor extends TaskExecutor {
             characteristics: stringifyJson(cart.characteristics),
             sizes: stringifyJson(cart.sizes),
             photos: stringifyJson(cart.photos),
-            organizationId
-          }
-         await this.#productRepository.create(newProductPayload)
+            organizationId,
+          };
+          await this.#productRepository.create(newProductPayload);
         }
       }
-
     } catch (error) {
       console.error('Ошибка при получении товаров WB:', error);
     }

@@ -68,112 +68,132 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
 
       const ids = advertList.map((ad) => ad.advertId);
 
-      const endDate = DateTime.now().toISODate(); // сегодня, формат YYYY-MM-DD
-      const beginDate = DateTime.now().minus({ days: 30 }).toISODate(); // 30 дней назад
+      // Разбить на пачки <= 50
+      const chunkSize = 50;
+      const idChunks = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        idChunks.push(ids.slice(i, i + chunkSize));
+      }
 
-      const advertingStatsByPeriod = await this.#axiosService.get(this.#baseUrl, {
-        params: {
-          ids: ids.join(','),
-          beginDate,
-          endDate,
-        },
-      });
+      const endDate = DateTime.now().toISODate();
+      const beginDate = DateTime.now().minus({ days: 30 }).toISODate();
 
-      if (advertingStatsByPeriod.status === 200) {
-        const advertStatsData: Array<AdvertStats> = advertingStatsByPeriod.data;
+      for (let i = 0; i < idChunks.length; i++) {
+        const chunk = idChunks[i];
 
-        for (const advertStats of advertStatsData) {
-          for (const day of advertStats.days) {
-            const existingStats = await this.#advertDayStatisticRepository.findOne({
-              where: { date: new Date(day.date) },
-            });
+        console.log(`Запрос ${i + 1}/${idChunks.length} — ${chunk.length} реклам`);
 
-            const advesting = await this.#advertInfoRepository.findOne({
-              where: { advertId: advertStats.advertId },
-            });
+        const response = await this.#axiosService.get(this.#baseUrl, {
+          params: {
+            ids: chunk.join(','),
+            beginDate,
+            endDate,
+          },
+        });
 
-            let createdDayStats = {
-              id: 1,
-            };
+        if (response.status === 200) {
+          const advertStatsData: Array<AdvertStats> = response.data;
 
-            const dayPayload = new AdvertisingDayStatisticModel({
-              date: new Date(day.date),
-              atbs: day.atbs,
-              canceled: day.canceled,
-              clicks: day.clicks,
-              cpc: day.cpc,
-              ctr: day.ctr,
-              orders: day.orders,
-              shks: day.shks,
-              sum: day.sum,
-              sumPrice: day.sum_price,
-              views: day.views,
-              advertisingId: advesting.id,
-            });
-
-            if (existingStats) {
-              await this.#advertDayStatisticRepository.updateById(existingStats.id, dayPayload);
-            } else {
-              createdDayStats = await this.#advertDayStatisticRepository.create(dayPayload);
-            }
-
-            for (const app of day.apps) {
-              let appRecord = await this.#advertDayAppsRepository.findOne({
-                where: { dayStatisticId: existingStats?.id ?? createdDayStats.id, appType: app.appType },
+          for (const advertStats of advertStatsData) {
+            for (const day of advertStats.days) {
+              const existingStats = await this.#advertDayStatisticRepository.findOne({
+                where: { date: new Date(day.date) },
               });
 
-              const appPayload = new AdvertisingDayAppModel({
-                dayStatisticId: existingStats?.id ?? createdDayStats.id,
-                appType: app.appType,
-                atbs: app.atbs,
-                canceled: app.canceled,
-                clicks: app.clicks,
-                cpc: app.cpc,
-                ctr: app.ctr,
-                orders: app.orders,
-                shks: app.shks,
-                sum: app.sum,
-                sum_price: app.sum_price,
-                views: app.views,
+              const advesting = await this.#advertInfoRepository.findOne({
+                where: { advertId: advertStats.advertId },
               });
 
-              if (appRecord) {
-                await this.#advertDayAppsRepository.updateById(appRecord.id, appPayload);
+              let createdDayStats = { id: null };
+
+              const dayPayload = new AdvertisingDayStatisticModel({
+                date: new Date(day.date),
+                atbs: day.atbs,
+                canceled: day.canceled,
+                clicks: day.clicks,
+                cpc: day.cpc,
+                ctr: day.ctr,
+                orders: day.orders,
+                shks: day.shks,
+                sum: day.sum,
+                sumPrice: day.sum_price,
+                views: day.views,
+                advertisingId: advesting.id,
+              });
+
+              if (existingStats) {
+                await this.#advertDayStatisticRepository.updateById(existingStats.id, dayPayload);
+                createdDayStats.id = existingStats.id;
               } else {
-                appRecord = await this.#advertDayAppsRepository.create(appPayload);
+                const created = await this.#advertDayStatisticRepository.create(dayPayload);
+                createdDayStats.id = created.id;
               }
 
-              for (const nm of app.nms) {
-                const product = await this.#productRepository.findOne({ where: { nmID: nm.nmId } });
-                if (!product) continue;
-
-                let nmRecord = await this.#advertDayAppsNms.findOne({
-                  where: { appStatisticId: appRecord.id, nmId: nm.nmId },
-                });
-                const nmPayload = new AdvertisingDayAppNmModel({
-                  appStatisticId: appRecord.id,
-                  nmId: nm.nmId,
-                  atbs: nm.atbs,
-                  canceled: nm.canceled,
-                  clicks: nm.clicks,
-                  cpc: nm.cpc,
-                  ctr: nm.ctr,
-                  orders: nm.orders,
-                  shks: nm.shks,
-                  sum: nm.sum,
-                  sum_price: nm.sum_price,
-                  views: nm.views,
-                  productId: product.id,
+              for (const app of day.apps) {
+                let appRecord = await this.#advertDayAppsRepository.findOne({
+                  where: { dayStatisticId: createdDayStats.id, appType: app.appType },
                 });
 
-                if (nmRecord) {
-                  await this.#advertDayAppsNms.updateById(nmRecord.id, nmPayload);
+                const appPayload = new AdvertisingDayAppModel({
+                  dayStatisticId: createdDayStats.id,
+                  appType: app.appType,
+                  atbs: app.atbs,
+                  canceled: app.canceled,
+                  clicks: app.clicks,
+                  cpc: app.cpc,
+                  ctr: app.ctr,
+                  orders: app.orders,
+                  shks: app.shks,
+                  sum: app.sum,
+                  sum_price: app.sum_price,
+                  views: app.views,
+                });
+
+                if (appRecord) {
+                  await this.#advertDayAppsRepository.updateById(appRecord.id, appPayload);
                 } else {
-                  await this.#advertDayAppsNms.create(nmPayload);
+                  appRecord = await this.#advertDayAppsRepository.create(appPayload);
+                }
+
+                for (const nm of app.nms) {
+                  const product = await this.#productRepository.findOne({ where: { nmID: nm.nmId } });
+                  if (!product) continue;
+
+                  let nmRecord = await this.#advertDayAppsNms.findOne({
+                    where: { appStatisticId: appRecord.id, nmId: nm.nmId },
+                  });
+
+                  const nmPayload = new AdvertisingDayAppNmModel({
+                    appStatisticId: appRecord.id,
+                    nmId: nm.nmId,
+                    atbs: nm.atbs,
+                    canceled: nm.canceled,
+                    clicks: nm.clicks,
+                    cpc: nm.cpc,
+                    ctr: nm.ctr,
+                    orders: nm.orders,
+                    shks: nm.shks,
+                    sum: nm.sum,
+                    sum_price: nm.sum_price,
+                    views: nm.views,
+                    productId: product.id,
+                  });
+
+                  if (nmRecord) {
+                    await this.#advertDayAppsNms.updateById(nmRecord.id, nmPayload);
+                  } else {
+                    await this.#advertDayAppsNms.create(nmPayload);
+                  }
                 }
               }
             }
           }
+        }
+
+        // ============ TIMEOUT 1 МИНУТА МЕЖДУ ЗАПРОСАМИ ============
+        if (i < idChunks.length - 1) {
+          console.log('Ждём 60 секунд...');
+          await new Promise((res) => setTimeout(res, 60_000));
         }
       }
     } catch (error) {
