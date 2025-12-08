@@ -15,8 +15,8 @@ export class Environment {
   @IsEnum(NodeEnvironment)
   NODE_ENV: NodeEnvironment = NodeEnvironment.Development;
 
-  @IsIP()
-  HOST: string = '127.0.0.1';
+  @IsIP('4')
+  HOST: string = '0.0.0.0';
 
   @Type(() => Number)
   @IsInt()
