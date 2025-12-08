@@ -3,6 +3,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Server } from 'node:http';
 import { AppModule } from './app.module';
 import GlobalExceptionFilter from './exceptionFilters/global.exceptionFilters';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication<Server>>(AppModule);
@@ -11,6 +12,10 @@ async function bootstrap() {
 
   const server = app.getHttpServer();
   const { httpAdapter } = app.get(HttpAdapterHost);
+  const configService = app.get(ConfigService);
+
+  const HOST = configService.get<string>('HOST') || '0.0.0.0';
+  const PORT = configService.get<number>('PORT') || 5000;
 
   const keepAliveTimeout = 60;
 
@@ -47,10 +52,10 @@ async function bootstrap() {
 
   app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
 
-  await app.listen(5000, 'localhost');
+  await app.listen(PORT, HOST);
   await app.startAllMicroservices();
 
-  console.log(`Listening on localhost:5000`);
+  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
 }
 
 bootstrap();
