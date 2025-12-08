@@ -3,7 +3,7 @@ import { UnitEconomicUseCase } from '@/useCase/controllers/unitEconomic/unitEcon
 import { UnitEconomicCreateDto, UnitEconomicGetQueryDto } from '@/shared/dtos/unitEconomic.dto';
 import { UnitEconomicProductsModel } from '@/infrastructure/core/typeOrm/models/unitEconomicProducts.model';
 
-@Controller('api/unit-economic')
+@Controller('unit-economic')
 export class UnitEconomicController {
   readonly #unitEconomicUseCase: UnitEconomicUseCase;
 

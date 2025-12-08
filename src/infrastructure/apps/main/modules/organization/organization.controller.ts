@@ -3,7 +3,7 @@ import { OrganizationUseCase } from '@/useCase/controllers/organization/organiza
 import { Request } from 'express';
 import { CreateOrganizationDto, GetUserOrganizationsDto, UpdateOrganizationDto } from '@/shared/dtos/organization.dto';
 
-@Controller('api/organization')
+@Controller('organization')
 export class OrganizationController {
   readonly #ogranizationUseCase: OrganizationUseCase;
 

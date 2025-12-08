@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { DeactiveUser, GetUserDto, UpdateUserDto, UserDto } from '@/shared/dtos/user.dto';
 import { UsersUseCase } from '@/useCase/controllers/users/users.useCase';
 
-@Controller('api/users')
+@Controller('users')
 export class UserController {
   readonly #userUseCase: UsersUseCase;
 

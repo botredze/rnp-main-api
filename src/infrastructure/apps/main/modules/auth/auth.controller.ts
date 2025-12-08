@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AuthDto } from '@/shared/dtos/auth.dto';
 import { AuthUseCases } from '@/useCase/controllers/auth/auth.useCases';
 
-@Controller('api/auth')
+@Controller('auth')
 export class AuthController {
   readonly #authUseCase: AuthUseCases;
 

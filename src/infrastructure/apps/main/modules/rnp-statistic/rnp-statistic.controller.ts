@@ -2,7 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { GetProductListQuery, GetRnpAnalyticsDto } from '@/shared/dtos/rnpAnalitics.dto';
 import { RnpUseCase } from '@/useCase/controllers/rnp/rnp.useCase';
 
-@Controller('api/rnp-statistic')
+@Controller('rnp-statistic')
 export class RnpStatisticController {
   readonly #rnpMainUseCase: RnpUseCase;
 
