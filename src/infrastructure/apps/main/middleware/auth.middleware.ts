@@ -24,6 +24,8 @@ export class AuthMiddleware implements NestMiddleware {
   async use(req: Request, _res: Response, next: NextFunction) {
     const token = getBearerToken(req);
 
+    console.log('AuthMiddleware hit', req.path);
+
     if (!token || !this.#jwtService.isValidToken(token)) {
       throw new UnauthorizedException('Invalid or missing token');
     }
