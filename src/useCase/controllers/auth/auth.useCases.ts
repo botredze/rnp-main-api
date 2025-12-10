@@ -19,7 +19,7 @@ export class AuthUseCases {
     });
 
     if (!user) {
-      throw new Error('User not found or invalid password');
+      throw new Error('Пользователь не найден или не верный пароль');
     }
 
     const payload = { id: user.id, login: user.login, role: user.role };
