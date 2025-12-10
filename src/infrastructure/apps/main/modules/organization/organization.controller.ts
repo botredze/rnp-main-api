@@ -46,6 +46,8 @@ export class OrganizationController {
       params.userId = user.id;
     }
 
+    console.log(params, 'params');
+
     return await this.#ogranizationUseCase.getList(params.userId);
   }
 
