@@ -40,13 +40,11 @@ export class OrganizationController {
       userId: 0,
     };
 
-    if (query) {
+    if (query.userId) {
       params.userId = query.userId;
     } else {
       params.userId = user.id;
     }
-
-    console.log(params, 'params');
 
     return await this.#ogranizationUseCase.getList(params.userId);
   }

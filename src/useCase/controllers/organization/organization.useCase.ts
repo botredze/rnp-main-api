@@ -34,14 +34,6 @@ export class OrganizationUseCase {
       },
     });
 
-    console.log(
-      {
-        userId,
-        status: In([OrganizationStatuses.Active, OrganizationStatuses.Inited]),
-      },
-      'where',
-    );
-
     if (list.length === 0) {
       return [];
     }
