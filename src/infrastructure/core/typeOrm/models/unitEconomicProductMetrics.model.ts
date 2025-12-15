@@ -50,7 +50,7 @@ export class UnitEconomicProductMetricsModel {
   percentOfPrice: number | null;
 
   @Column({ type: 'text', nullable: true })
-  symbol: boolean;
+  symbol: string;
 
   @Column({ type: 'boolean', default: true })
   activeLine: boolean;

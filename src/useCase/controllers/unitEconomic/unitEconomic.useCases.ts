@@ -68,6 +68,7 @@ export class UnitEconomicUseCase {
         activeLine: item.activeLine,
         disabledView: item.disabledView,
         disabledInput: item.disabledInput,
+        symbol: item.symbol,
       });
 
       await this.#unitEconomicProductMetricsRepository.create(createMetricsPayload);
