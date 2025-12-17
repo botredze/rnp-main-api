@@ -161,188 +161,190 @@ daily_data AS (
 ),
 
 daily_with_changes AS (
-    SELECT 
+    SELECT
         date,
-        
+
         -- Продажи
         sales_total_amount,
-        CASE 
-            WHEN LAG(sales_total_amount) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((sales_total_amount - LAG(sales_total_amount) OVER (ORDER BY date)) / LAG(sales_total_amount) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS sales_total_amount_change_percent,
-        
+        percent_change(
+            sales_total_amount,
+            LAG(sales_total_amount) OVER w
+        ) AS sales_total_amount_change_percent,
+
         sales_total_count,
-        CASE 
-            WHEN LAG(sales_total_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((sales_total_count - LAG(sales_total_count) OVER (ORDER BY date)) / LAG(sales_total_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS sales_total_count_change_percent,
+        percent_change(
+            sales_total_count,
+            LAG(sales_total_count) OVER w
+        ) AS sales_total_count_change_percent,
 
         -- Заказы
         orders_amount,
-        CASE 
-            WHEN LAG(orders_amount) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((orders_amount - LAG(orders_amount) OVER (ORDER BY date)) / LAG(orders_amount) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS orders_amount_change_percent,
-        
+        percent_change(
+            orders_amount,
+            LAG(orders_amount) OVER w
+        ) AS orders_amount_change_percent,
+
         orders_count,
-        CASE 
-            WHEN LAG(orders_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((orders_count - LAG(orders_count) OVER (ORDER BY date)) / LAG(orders_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS orders_count_change_percent,
-        
+        percent_change(
+            orders_count,
+            LAG(orders_count) OVER w
+        ) AS orders_count_change_percent,
+
         orders_sales_count,
-        CASE 
-            WHEN LAG(orders_sales_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((orders_sales_count - LAG(orders_sales_count) OVER (ORDER BY date)) / LAG(orders_sales_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS orders_sales_count_change_percent,
+        percent_change(
+            orders_sales_count,
+            LAG(orders_sales_count) OVER w
+        ) AS orders_sales_count_change_percent,
 
         -- История
         open_card_count,
-        CASE 
-            WHEN LAG(open_card_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((open_card_count - LAG(open_card_count) OVER (ORDER BY date)) / LAG(open_card_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS open_card_count_change_percent,
-        
+        percent_change(
+            open_card_count,
+            LAG(open_card_count) OVER w
+        ) AS open_card_count_change_percent,
+
         add_to_card_count,
-        CASE 
-            WHEN LAG(add_to_card_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((add_to_card_count - LAG(add_to_card_count) OVER (ORDER BY date)) / LAG(add_to_card_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS add_to_card_count_change_percent,
-        
+        percent_change(
+            add_to_card_count,
+            LAG(add_to_card_count) OVER w
+        ) AS add_to_card_count_change_percent,
+
         history_orders_count,
-        CASE 
-            WHEN LAG(history_orders_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((history_orders_count - LAG(history_orders_count) OVER (ORDER BY date)) / LAG(history_orders_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS history_orders_count_change_percent,
-        
+        percent_change(
+            history_orders_count,
+            LAG(history_orders_count) OVER w
+        ) AS history_orders_count_change_percent,
+
         order_sum_rub,
-        CASE 
-            WHEN LAG(order_sum_rub) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((order_sum_rub - LAG(order_sum_rub) OVER (ORDER BY date)) / LAG(order_sum_rub) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS order_sum_rub_change_percent,
-        
+        percent_change(
+            order_sum_rub,
+            LAG(order_sum_rub) OVER w
+        ) AS order_sum_rub_change_percent,
+
         buy_out_count,
-        CASE 
-            WHEN LAG(buy_out_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((buy_out_count - LAG(buy_out_count) OVER (ORDER BY date)) / LAG(buy_out_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS buy_out_count_change_percent,
-        
+        percent_change(
+            buy_out_count,
+            LAG(buy_out_count) OVER w
+        ) AS buy_out_count_change_percent,
+
         buy_out_sum_rub,
-        CASE 
-            WHEN LAG(buy_out_sum_rub) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((buy_out_sum_rub - LAG(buy_out_sum_rub) OVER (ORDER BY date)) / LAG(buy_out_sum_rub) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS buy_out_sum_rub_change_percent,
-        
+        percent_change(
+            buy_out_sum_rub,
+            LAG(buy_out_sum_rub) OVER w
+        ) AS buy_out_sum_rub_change_percent,
+
         avg_buy_out_percent,
-        CASE 
-            WHEN LAG(avg_buy_out_percent) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((avg_buy_out_percent - LAG(avg_buy_out_percent) OVER (ORDER BY date)) / LAG(avg_buy_out_percent) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS avg_buy_out_percent_change_percent,
-        
+        percent_change(
+            avg_buy_out_percent,
+            LAG(avg_buy_out_percent) OVER w
+        ) AS avg_buy_out_percent_change_percent,
+
         avg_add_to_card_conversion,
-        CASE 
-            WHEN LAG(avg_add_to_card_conversion) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((avg_add_to_card_conversion - LAG(avg_add_to_card_conversion) OVER (ORDER BY date)) / LAG(avg_add_to_card_conversion) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS avg_add_to_card_conversion_change_percent,
-        
+        percent_change(
+            avg_add_to_card_conversion,
+            LAG(avg_add_to_card_conversion) OVER w
+        ) AS avg_add_to_card_conversion_change_percent,
+
         avg_card_to_order_conversion,
-        CASE 
-            WHEN LAG(avg_card_to_order_conversion) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((avg_card_to_order_conversion - LAG(avg_card_to_order_conversion) OVER (ORDER BY date)) / LAG(avg_card_to_order_conversion) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS avg_card_to_order_conversion_change_percent,
-        
+        percent_change(
+            avg_card_to_order_conversion,
+            LAG(avg_card_to_order_conversion) OVER w
+        ) AS avg_card_to_order_conversion_change_percent,
+
         avg_add_to_wishlist,
-        CASE 
-            WHEN LAG(avg_add_to_wishlist) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((avg_add_to_wishlist - LAG(avg_add_to_wishlist) OVER (ORDER BY date)) / LAG(avg_add_to_wishlist) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS avg_add_to_wishlist_change_percent,
+        percent_change(
+            avg_add_to_wishlist,
+            LAG(avg_add_to_wishlist) OVER w
+        ) AS avg_add_to_wishlist_change_percent,
 
         -- Остатки
         stock_total,
-        CASE 
-            WHEN LAG(stock_total) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((stock_total - LAG(stock_total) OVER (ORDER BY date)) / LAG(stock_total) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS stock_total_change_percent,
-        
+        percent_change(
+            stock_total,
+            LAG(stock_total) OVER w
+        ) AS stock_total_change_percent,
+
         stock_count,
-        CASE 
-            WHEN LAG(stock_count) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((stock_count - LAG(stock_count) OVER (ORDER BY date)) / LAG(stock_count) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS stock_count_change_percent,
-        
+        percent_change(
+            stock_count,
+            LAG(stock_count) OVER w
+        ) AS stock_count_change_percent,
+
         stock_sum,
-        CASE 
-            WHEN LAG(stock_sum) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((stock_sum - LAG(stock_sum) OVER (ORDER BY date)) / LAG(stock_sum) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS stock_sum_change_percent,
-        
+        percent_change(
+            stock_sum,
+            LAG(stock_sum) OVER w
+        ) AS stock_sum_change_percent,
+
         avg_orders_by_mouth,
-        CASE 
-            WHEN LAG(avg_orders_by_mouth) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((avg_orders_by_mouth - LAG(avg_orders_by_mouth) OVER (ORDER BY date)) / LAG(avg_orders_by_mouth) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS avg_orders_by_mouth_change_percent,
+        percent_change(
+            avg_orders_by_mouth,
+            LAG(avg_orders_by_mouth) OVER w
+        ) AS avg_orders_by_mouth_change_percent,
 
         -- Реклама
         adv_spend,
-        CASE 
-            WHEN LAG(adv_spend) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((adv_spend - LAG(adv_spend) OVER (ORDER BY date)) / LAG(adv_spend) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS adv_spend_change_percent,
-        
+        percent_change(
+            adv_spend,
+            LAG(adv_spend) OVER w
+        ) AS adv_spend_change_percent,
+
         adv_views,
-        CASE 
-            WHEN LAG(adv_views) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((adv_views - LAG(adv_views) OVER (ORDER BY date)) / LAG(adv_views) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS adv_views_change_percent,
-        
+        percent_change(
+            adv_views,
+            LAG(adv_views) OVER w
+        ) AS adv_views_change_percent,
+
         adv_clicks,
-        CASE 
-            WHEN LAG(adv_clicks) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((adv_clicks - LAG(adv_clicks) OVER (ORDER BY date)) / LAG(adv_clicks) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS adv_clicks_change_percent,
-        
+        percent_change(
+            adv_clicks,
+            LAG(adv_clicks) OVER w
+        ) AS adv_clicks_change_percent,
+
         adv_atbs,
-        CASE 
-            WHEN LAG(adv_atbs) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((adv_atbs - LAG(adv_atbs) OVER (ORDER BY date)) / LAG(adv_atbs) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS adv_atbs_change_percent,
-        
+        percent_change(
+            adv_atbs,
+            LAG(adv_atbs) OVER w
+        ) AS adv_atbs_change_percent,
+
         adv_orders,
-        CASE 
-            WHEN LAG(adv_orders) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((adv_orders - LAG(adv_orders) OVER (ORDER BY date)) / LAG(adv_orders) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS adv_orders_change_percent,
-        
+        percent_change(
+            adv_orders,
+            LAG(adv_orders) OVER w
+        ) AS adv_orders_change_percent,
+
         cpc,
-        CASE 
-            WHEN LAG(cpc) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((cpc - LAG(cpc) OVER (ORDER BY date)) / LAG(cpc) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS cpc_change_percent,
-        
+        percent_change(
+            cpc,
+            LAG(cpc) OVER w
+        ) AS cpc_change_percent,
+
         ctr,
-        CASE 
-            WHEN LAG(ctr) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((ctr - LAG(ctr) OVER (ORDER BY date)) / LAG(ctr) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS ctr_change_percent,
-        
+        percent_change(
+            ctr,
+            LAG(ctr) OVER w
+        ) AS ctr_change_percent,
+
         cpo,
-        CASE 
-            WHEN LAG(cpo) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((cpo - LAG(cpo) OVER (ORDER BY date)) / LAG(cpo) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS cpo_change_percent,
-        
+        percent_change(
+            cpo,
+            LAG(cpo) OVER w
+        ) AS cpo_change_percent,
+
         organic_clicks,
-        CASE 
-            WHEN LAG(organic_clicks) OVER (ORDER BY date) = 0 THEN NULL
-            ELSE ROUND(((organic_clicks - LAG(organic_clicks) OVER (ORDER BY date)) / LAG(organic_clicks) OVER (ORDER BY date) * 100)::numeric, 2)
-        END AS organic_clicks_change_percent,
+        percent_change(
+            organic_clicks,
+            LAG(organic_clicks) OVER w
+        ) AS organic_clicks_change_percent,
 
         -- Прогнозы
         days_to_finish,
         finish_date
 
     FROM daily_data
+    WINDOW w AS (ORDER BY date)
 )
+
 
 -- Объединяем daily данные и TOTAL строку
 SELECT * FROM daily_with_changes
