@@ -185,6 +185,8 @@ export class GetProductStatisticExecutor extends TaskExecutor {
           }
         }
       }
+
+      console.log('Воронка продаж обновлена');
     } catch (error) {
       console.log(error, 'error');
     }

@@ -70,6 +70,8 @@ export class GetStocksExecutor extends TaskExecutor {
           await this.#stockRepository.create(payload);
         }
       }
+
+      console.log('Данные складов обновлены');
     } catch (error) {
       console.log(error);
     }

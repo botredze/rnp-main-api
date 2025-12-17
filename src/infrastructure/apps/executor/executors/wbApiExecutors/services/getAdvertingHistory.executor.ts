@@ -3,13 +3,9 @@ import axios, { AxiosInstance } from 'axios';
 import { DateTime } from 'luxon';
 import { AdvertStats } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/advert.dto';
 import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advestingInfo.repository';
-import {
-  AdvestingDayStatisticRepository
-} from '@/infrastructure/core/typeOrm/repositories/advestingDayStatistic.repository';
+import { AdvestingDayStatisticRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayStatistic.repository';
 import { AdvestingDayAppsRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayApps.repository';
-import {
-  AdvestingDayAppsNmsRepository
-} from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
+import { AdvestingDayAppsNmsRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
 import { In } from 'typeorm';
 import { AdvertisingDayStatisticModel } from '@/infrastructure/core/typeOrm/models/advertisingDayStatistic.model';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
@@ -92,16 +88,19 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
         });
 
         if (response.status === 200) {
-          const advertStatsData: Array<AdvertStats> = response.data;
+          const advertStatsData: Array<AdvertStats> = response.data ?? [];
 
           for (const advertStats of advertStatsData) {
             for (const day of advertStats.days) {
-              const existingStats = await this.#advertDayStatisticRepository.findOne({
-                where: { date: new Date(day.date) },
-              });
-
               const advesting = await this.#advertInfoRepository.findOne({
                 where: { advertId: advertStats.advertId },
+              });
+
+              const existingStats = await this.#advertDayStatisticRepository.findOne({
+                where: {
+                  date: new Date(day.date),
+                  advertisingId: advesting.id,
+                },
               });
 
               let createdDayStats = { id: null };
@@ -159,7 +158,7 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
                   const product = await this.#productRepository.findOne({ where: { nmID: nm.nmId } });
                   if (!product) continue;
 
-                  let nmRecord = await this.#advertDayAppsNms.findOne({
+                  const nmRecord = await this.#advertDayAppsNms.findOne({
                     where: { appStatisticId: appRecord.id, nmId: nm.nmId },
                   });
 
@@ -196,6 +195,8 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
           await new Promise((res) => setTimeout(res, 60_000));
         }
       }
+
+      console.log('Статистика рекламных компаний');
     } catch (error) {
       console.log(error, 'error');
     }

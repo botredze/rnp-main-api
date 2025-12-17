@@ -21,6 +21,7 @@ import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories
 import { ProductMetricsRepository } from '@/infrastructure/core/typeOrm/repositories/productMetrics.repository';
 import { WbDailyControllerExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/wbDailyController.executor';
 import { MetricsExecutor } from '@/infrastructure/apps/executor/executors/productMetrics/metrics.executor';
+import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
 
 @Injectable()
 export class TaskExecutorFactory {
@@ -41,15 +42,10 @@ export class TaskExecutorFactory {
     private readonly stockRepository: StocksRepository,
     private readonly stockCountRepository: StockCountRepository,
     private readonly productMetricsRepository: ProductMetricsRepository,
+    private readonly stockOnSiteRepository: StockCountOnSideRepository,
   ) {}
 
   create(taskName: TaskName): TaskExecutor {
-    console.log(
-      taskName.startsWith(TaskName.OrganizationInitExecutor),
-      'taskName.startsWith(TaskName.OrganizationInitExecutor',
-    );
-
-    console.log(taskName, 'tackName');
     if (taskName.startsWith(TaskName.OrganizationInitExecutor)) {
       const parts = taskName.split(':');
       const orgId = parts[1] ? Number(parts[1]) : null;
@@ -69,6 +65,7 @@ export class TaskExecutorFactory {
         this.stockRepository,
         this.configService,
         this.stockCountRepository,
+        this.stockOnSiteRepository,
       );
     }
 
@@ -88,6 +85,7 @@ export class TaskExecutorFactory {
           this.stockRepository,
           this.configService,
           this.stockCountRepository,
+          this.stockOnSiteRepository,
         );
 
       case TaskName.CreateProductLogs:

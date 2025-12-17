@@ -23,6 +23,8 @@ import { SalesRepository } from '@/infrastructure/core/typeOrm/repositories/sale
 import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/stocks.repository';
 import { ConfigService } from '@nestjs/config';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
+import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
+import { GetStockCountTodayExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockCountToday.executor';
 
 export class WbDailyControllerExecutor extends TaskExecutor {
   readonly #configService: ConfigService;
@@ -38,6 +40,7 @@ export class WbDailyControllerExecutor extends TaskExecutor {
   readonly #salesRepository: SalesRepository;
   readonly #stockRepository: StocksRepository;
   readonly #stockReportRepository: StockCountRepository;
+  readonly #stockOnSiteRepository: StockCountOnSideRepository;
 
   // executors
   readonly #getOrganizationInfoExecutor: GetOrganizationInfoExecutor;
@@ -50,6 +53,7 @@ export class WbDailyControllerExecutor extends TaskExecutor {
   readonly #getProductStatistic: GetProductStatisticExecutor;
   readonly #getSalesExecutor: GetSalesExecutor;
   readonly #getOrdersExecutor: GetOrdersExecutor;
+  readonly #getStockOnSiteExecutor: GetStockCountTodayExecutor;
 
   constructor(
     organizationRepository: OrganizationRepository,
@@ -65,6 +69,7 @@ export class WbDailyControllerExecutor extends TaskExecutor {
     stockRepository: StocksRepository,
     configService: ConfigService,
     stockReportRepository: StockCountRepository,
+    stockOnSiteRepository: StockCountOnSideRepository,
   ) {
     super();
 
@@ -82,6 +87,7 @@ export class WbDailyControllerExecutor extends TaskExecutor {
     this.#stockRepository = stockRepository;
     this.#configService = configService;
     this.#stockReportRepository = stockReportRepository;
+    this.#stockOnSiteRepository = stockOnSiteRepository;
 
     // executors (создаём после инициализации репозиториев)
     this.#getOrganizationInfoExecutor = new GetOrganizationInfoExecutor(
@@ -110,6 +116,11 @@ export class WbDailyControllerExecutor extends TaskExecutor {
     this.#getProductStatistic = new GetProductStatisticExecutor(this.#productRepository, this.#productStatsRepository);
     this.#getSalesExecutor = new GetSalesExecutor(this.#productRepository, this.#salesRepository);
     this.#getOrdersExecutor = new GetOrdersExecutor(this.#orderRepository, this.#productRepository);
+    this.#getStockOnSiteExecutor = new GetStockCountTodayExecutor(
+      this.#productRepository,
+      this.#organizationRepository,
+      this.#stockOnSiteRepository,
+    );
   }
 
   async execute() {
@@ -124,20 +135,21 @@ export class WbDailyControllerExecutor extends TaskExecutor {
         await this.#getOrganizationInfoExecutor.execute(apiKey, id);
         await this.#getStocksExecutor.execute(apiKey, id);
         await this.#getProductsExecutor.execute(apiKey, id);
-        await this.#getSalesExecutor.execute(apiKey);
-        await this.#getOrdersExecutor.execute(apiKey);
+        // await this.#getSalesExecutor.execute(apiKey);
+        // await this.#getOrdersExecutor.execute(apiKey);
         await this.#getProductStatistic.execute(apiKey, organizationName);
-        await this.#getAdvertisingListExecutor.execute(apiKey, id);
         await this.#getStockReportExecutor.execute(apiKey);
+        await this.#getAdvertisingListExecutor.execute(apiKey, id);
         await this.#getAdvertingHistoryExecutor.execute(apiKey, id);
         await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey);
+        await this.#getStockOnSiteExecutor.execute();
 
         await this.#organizationRepository.updateById(id, {
           status: OrganizationStatuses.Active,
         });
       }
-    }
 
-    console.log('Все данные обновлены');
+      console.log(`Все данные обновлены ${organizationName}`);
+    }
   }
 }

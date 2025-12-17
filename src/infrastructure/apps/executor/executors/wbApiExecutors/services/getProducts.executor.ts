@@ -2,7 +2,7 @@ import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecuto
 import axios, { AxiosInstance } from 'axios';
 import { ProductCard, ProductDto } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/product.dto';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
-import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
+import { ProductsModel, ProductStatuses } from '@/infrastructure/core/typeOrm/models/products.model';
 import { stringifyJson } from '@/infrastructure/apps/scheduler/heplers/json.helper';
 import { DeepPartial } from 'typeorm';
 
@@ -40,6 +40,7 @@ export class GetProductsExecutor extends TaskExecutor {
     const allProducts: Array<ProductCard> = [];
 
     try {
+      // Получаем все продукты из API
       while (hasMore) {
         const body = {
           settings: {
@@ -80,11 +81,22 @@ export class GetProductsExecutor extends TaskExecutor {
 
       console.log(`Всего получено товаров: ${allProducts.length}`);
 
+      const existingProducts = await this.#productRepository.findMany({
+        where: { organizationId },
+      });
+
+      const fetchedNmIDs = new Set(allProducts.map((p) => p.nmID));
+
       for (const cart of allProducts) {
-        const existProduct = await this.#productRepository.exist({ nmID: cart.nmID, organizationId });
+        const existProduct = await this.#productRepository.exist({
+          nmID: cart.nmID,
+          organizationId,
+        });
 
         if (existProduct) {
-          const existingProduct = await this.#productRepository.findOne({ where: { nmID: cart.nmID } });
+          const existingProduct = await this.#productRepository.findOne({
+            where: { nmID: cart.nmID, organizationId },
+          });
 
           const { id: productId } = existingProduct;
 
@@ -98,8 +110,10 @@ export class GetProductsExecutor extends TaskExecutor {
             characteristics: stringifyJson(cart.characteristics),
             sizes: stringifyJson(cart.sizes),
             photos: stringifyJson(cart.photos),
+            status: ProductStatuses.ACTIVE,
             organizationId,
           };
+
           await this.#productRepository.updateById(productId, updatedProductPayload);
         } else {
           const newProductPayload: DeepPartial<ProductsModel> = {
@@ -112,13 +126,29 @@ export class GetProductsExecutor extends TaskExecutor {
             characteristics: stringifyJson(cart.characteristics),
             sizes: stringifyJson(cart.sizes),
             photos: stringifyJson(cart.photos),
+            status: ProductStatuses.ACTIVE,
             organizationId,
           };
+
           await this.#productRepository.create(newProductPayload);
         }
       }
+
+      let deletedCount = 0;
+      for (const existingProduct of existingProducts) {
+        if (!fetchedNmIDs.has(existingProduct.nmID)) {
+          await this.#productRepository.updateById(existingProduct.id, {
+            status: ProductStatuses.DELETED,
+          });
+          deletedCount++;
+        }
+      }
+
+      console.log(`Помечено как удаленных: ${deletedCount} товаров`);
     } catch (error) {
       console.error('Ошибка при получении товаров WB:', error);
     }
+
+    console.log('Продукты обновлены');
   }
 }

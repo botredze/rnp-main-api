@@ -1,12 +1,12 @@
 import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecutor';
 import axios, { AxiosInstance } from 'axios';
 import { ProductStockInfo } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/stocks.dto';
-import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
-import { StockCountModel } from '@/infrastructure/core/typeOrm/models/stockCount.model';
 import { DateTime } from 'luxon';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { OrganizationRepository } from '@/infrastructure/core/typeOrm/repositories/organization.repository';
 import { OrganizationStatuses } from '@/infrastructure/core/typeOrm/models/organizations.model';
+import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
+import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
 
 export class GetStockCountTodayExecutor extends TaskExecutor {
   readonly #header = {
@@ -18,21 +18,22 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
   readonly #getReportUrl = 'https://seller-analytics-api.wildberries.ru/api/v1/warehouse_remains/tasks';
   #axiosService: AxiosInstance;
 
-  readonly #stockCountRepository: StockCountRepository;
   readonly #productRepository: ProductRepository;
 
   readonly #organizationRepository: OrganizationRepository;
 
+  readonly #stockOnSiteRepository: StockCountOnSideRepository;
+
   constructor(
-    stockCountRepository: StockCountRepository,
     productRepository: ProductRepository,
     organizationRepository: OrganizationRepository,
+    stockOnSiteRepository: StockCountOnSideRepository,
   ) {
     super();
     this.#axiosService = axios.create();
-    this.#stockCountRepository = stockCountRepository;
     this.#productRepository = productRepository;
     this.#organizationRepository = organizationRepository;
+    this.#stockOnSiteRepository = stockOnSiteRepository;
   }
 
   #initAxios(apiKey: string) {
@@ -123,10 +124,8 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
                 }
                 const todayDate = DateTime.now().toJSDate();
 
-                const stockSavePayload = new StockCountModel({
+                const stockSavePayload = new StockCountOnSideModel({
                   date: todayDate,
-                  lastChangeDate: todayDate,
-                  warehouseName: stockData.warehouses?.map((w) => w.warehouseName).join(', '),
                   nmId: stockData.nmId,
                   techSize: stockData.techSize,
                   brand: stockData.brand,
@@ -134,10 +133,11 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
                   quantityFull: totalQuantity,
                   inWayToClient,
                   inWayFromClient,
+                  warehouseNames: stockData.warehouses?.map((w) => w.warehouseName).join(', '),
                   productId: product.id,
                 });
 
-                await this.#stockCountRepository.create(stockSavePayload);
+                await this.#stockOnSiteRepository.create(stockSavePayload);
               }
             }
           }

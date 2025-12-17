@@ -20,6 +20,12 @@ import { StockCountModel } from '@/infrastructure/core/typeOrm/models/stockCount
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
+import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
+
+export enum ProductStatuses {
+  DELETED = 'deleted',
+  ACTIVE = 'active',
+}
 
 @Entity({ name: 'products' })
 export class ProductsModel {
@@ -60,6 +66,14 @@ export class ProductsModel {
   @Column({ name: 'organization_id' })
   organizationId: number;
 
+  @Column({
+    type: 'enum',
+    enum: ProductStatuses,
+    default: ProductStatuses.ACTIVE,
+    name: 'status',
+  })
+  status: ProductStatuses;
+
   @OneToMany(() => OrderModel, (order) => order.product)
   orders?: Array<OrderModel>;
 
@@ -81,6 +95,9 @@ export class ProductsModel {
   @ManyToMany(() => AdvertisingModel, (ad) => ad.products)
   @JoinTable({ name: 'product_advertising' })
   advertisements?: Array<AdvertisingModel>;
+
+  @OneToMany(() => StockCountOnSideModel, (stock) => stock.product)
+  stockOnSide?: Array<StockCountOnSideModel>;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;

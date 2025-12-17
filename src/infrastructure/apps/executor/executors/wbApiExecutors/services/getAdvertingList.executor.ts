@@ -2,7 +2,6 @@ import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecuto
 import axios, { AxiosInstance } from 'axios';
 import {
   IAdvertDto,
-  IAdvertInfoDetails,
   IAdvertInfoDetailsArray,
 } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/advert.dto';
 import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertising.model';
@@ -10,22 +9,18 @@ import { stringifyJson } from '@/infrastructure/apps/scheduler/heplers/json.help
 import { DeepPartial } from 'typeorm';
 import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advestingInfo.repository';
 
-
 export class GetAdvertingListExecutor extends TaskExecutor {
   readonly #header = {
     'Content-Type': 'application/json',
-  }
+  };
 
-  readonly #advertList = 'https://advert-api.wildberries.ru/adv/v1/promotion/count'
-  readonly #advertInfo = 'https://advert-api.wildberries.ru/adv/v1/promotion/adverts'
+  readonly #advertList = 'https://advert-api.wildberries.ru/adv/v1/promotion/count';
+  readonly #advertInfo = 'https://advert-api.wildberries.ru/adv/v1/promotion/adverts';
   readonly #advertingInfoRepository: AdvertInfoRepository;
 
   #axiosService: AxiosInstance;
 
-
-  constructor(
-    advertingInfoRepository: AdvertInfoRepository,
-  ) {
+  constructor(advertingInfoRepository: AdvertInfoRepository) {
     super();
     this.#axiosService = axios.create();
     this.#advertingInfoRepository = advertingInfoRepository;
@@ -40,13 +35,13 @@ export class GetAdvertingListExecutor extends TaskExecutor {
     });
   }
 
-  async execute(apiKey: string, organizationId: number) : Promise<void>{
+  async execute(apiKey: string, organizationId: number): Promise<void> {
     this.#initAxios(apiKey);
     try {
-      const advertListResponse = await this.#axiosService.get(this.#advertList)
+      const advertListResponse = await this.#axiosService.get(this.#advertList);
 
-      if(advertListResponse.status === 200) {
-        const advertList: IAdvertDto = advertListResponse.data
+      if (advertListResponse.status === 200) {
+        const advertList: IAdvertDto = advertListResponse.data;
 
         for (const advert of advertList.adverts) {
           const body: Array<number> = advert.advert_list.map((a) => a.advertId);
@@ -56,36 +51,40 @@ export class GetAdvertingListExecutor extends TaskExecutor {
             continue;
           }
 
-          const advertInfoResponse = await this.#axiosService.post(this.#advertInfo, body)
+          const advertInfoResponse = await this.#axiosService.post(this.#advertInfo, body);
 
           if (advertInfoResponse.status === 200) {
-            const advertInfoDetails: IAdvertInfoDetailsArray = advertInfoResponse.data
+            const advertInfoDetails: IAdvertInfoDetailsArray = advertInfoResponse.data;
 
             for (const advertInfoDetail of advertInfoDetails) {
-              const existingAdvert = await  this.#advertingInfoRepository.findOne({where: {advertId: advertInfoDetail.advertId}})
+              const existingAdvert = await this.#advertingInfoRepository.findOne({
+                where: { advertId: advertInfoDetail.advertId },
+              });
 
               const payload: DeepPartial<AdvertisingModel> = {
                 advertId: advertInfoDetail.advertId,
                 advertName: advertInfoDetail.name,
                 startTime: advertInfoDetail.startTime,
                 endTime: advertInfoDetail.endTime,
-                status:  advertInfoDetail.status,
+                status: advertInfoDetail.status,
                 type: advertInfoDetail.status,
                 dailyBudget: advertInfoDetail.dailyBudget,
                 autoParams: stringifyJson(advertInfoDetail.autoParams),
-                organizationId
-              }
+                organizationId,
+              };
 
-              if(existingAdvert) {
-                await this.#advertingInfoRepository.updateById(existingAdvert.id, payload)
-              }else {
-                await this.#advertingInfoRepository.create(payload)
+              if (existingAdvert) {
+                await this.#advertingInfoRepository.updateById(existingAdvert.id, payload);
+              } else {
+                await this.#advertingInfoRepository.create(payload);
               }
             }
           }
         }
       }
-    }catch (error) {
+
+      console.log('Получение списка рекламных компаний');
+    } catch (error) {
       console.log(error);
     }
   }

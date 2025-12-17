@@ -25,6 +25,7 @@ import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedu
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
 import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
+import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
             ProductLogAndStrategyModel,
             SalePlanSettingsModel,
             NotesModel,
+            StockCountOnSideModel,
           ],
           synchronize: false,
         };

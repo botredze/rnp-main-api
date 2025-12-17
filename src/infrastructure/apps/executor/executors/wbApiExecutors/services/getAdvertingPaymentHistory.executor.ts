@@ -81,6 +81,8 @@ export class GetAdvertingPaymentHistoryExecutor extends TaskExecutor {
           }
         }
       }
+
+      console.log('История платежей по рекламным компаниям');
     } catch (error) {
       console.log(error, 'error');
     }
