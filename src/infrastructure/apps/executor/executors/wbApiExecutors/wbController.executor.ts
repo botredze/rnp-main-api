@@ -132,22 +132,22 @@ export class WbControllerExecutor extends TaskExecutor {
       const { apiKey, id, organizationName } = organization;
 
       if (apiKey && id) {
-        // await this.#getOrganizationInfoExecutor.execute(apiKey, id);
-        // await this.#getStocksExecutor.execute(apiKey, id);
-        // await this.#getProductsExecutor.execute(apiKey, id);
+        await this.#getOrganizationInfoExecutor.execute(apiKey, id);
+        await this.#getStocksExecutor.execute(apiKey, id);
+        await this.#getProductsExecutor.execute(apiKey, id);
 
-        // await this.#getSalesExecutor.execute(apiKey);
-        // await this.#getOrdersExecutor.execute(apiKey);
+        await this.#getSalesExecutor.execute(apiKey);
+        await this.#getOrdersExecutor.execute(apiKey);
 
-        // await this.#getProductStatistic.execute(apiKey, organizationName);
-        // await this.#getAdvertisingListExecutor.execute(apiKey, id);
-        // await this.#getStockReportExecutor.execute(apiKey);
-        // await this.#getAdvertingHistoryExecutor.execute(apiKey, id);
-        // await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey);
+        await this.#getProductStatistic.execute(apiKey, organizationName);
+        await this.#getAdvertisingListExecutor.execute(apiKey, id);
+        await this.#getStockReportExecutor.execute(apiKey);
+        await this.#getAdvertingHistoryExecutor.execute(apiKey, id);
+        await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey);
         await this.#getStockOnSiteExecutor.execute();
-        // await this.#organizationRepository.updateById(id, {
-        //   status: OrganizationStatuses.Active,
-        // });
+        await this.#organizationRepository.updateById(id, {
+          status: OrganizationStatuses.Active,
+        });
       }
     }
 

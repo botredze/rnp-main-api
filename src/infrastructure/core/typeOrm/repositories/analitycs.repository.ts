@@ -1154,28 +1154,28 @@ SELECT
     (SELECT start_date FROM date_range) AS data_start_date,
     (SELECT end_date FROM date_range) AS data_end_date,
     
-    -- 1. Общее количество заказов
-    COALESCE((SELECT total_orders_count FROM history_totals), 0) AS total_orders_count,
+    -- 1. Общее количество заказов (целое число)
+    COALESCE(ROUND((SELECT total_orders_count FROM history_totals)), 0) AS total_orders_count,
     
-    -- 2. Сумма заказов
-    COALESCE((SELECT total_orders_sum FROM history_totals), 0) AS total_orders_sum,
+    -- 2. Сумма заказов (целое число)
+    COALESCE(ROUND((SELECT total_orders_sum FROM history_totals)), 0) AS total_orders_sum,
     
-    -- 3. Количество продаж
-    COALESCE((SELECT total_sales_count FROM history_totals), 0) AS total_sales_count,
+    -- 3. Количество продаж (целое число)
+    COALESCE(ROUND((SELECT total_sales_count FROM history_totals)), 0) AS total_sales_count,
     
-    -- 4. Сумма продаж
-    COALESCE((SELECT total_sales_sum FROM history_totals), 0) AS total_sales_sum,
+    -- 4. Сумма продаж (целое число)
+    COALESCE(ROUND((SELECT total_sales_sum FROM history_totals)), 0) AS total_sales_sum,
     
-    -- 5. Средний процент выкупа
+    -- 5. Средний процент выкупа (остается с 2 знаками после запятой)
     COALESCE(ROUND((SELECT avg_buy_out_percent FROM history_totals), 2), 0) AS avg_buy_out_percent,
     
-    -- 6. Остатки всех товаров за последнюю дату
-    COALESCE((SELECT total_stock_quantity FROM stock_totals), 0) AS total_stock_quantity,
+    -- 6. Остатки всех товаров за последнюю дату (целое число)
+    COALESCE(ROUND((SELECT total_stock_quantity FROM stock_totals)), 0) AS total_stock_quantity,
     
-    -- 7. Общее количество просмотров
-    COALESCE((SELECT total_views FROM history_totals), 0) AS total_views,
+    -- 7. Общее количество просмотров (целое число)
+    COALESCE(ROUND((SELECT total_views FROM history_totals)), 0) AS total_views,
     
-    -- 8. Оборачиваемость (дни до окончания товаров)
+    -- 8. Оборачиваемость (дни до окончания товаров) - целое число
     CASE
         WHEN (SELECT avg_daily_sales FROM avg_sales_last_5_days) > 0 
              AND (SELECT avg_buyout_ratio FROM avg_buyout_last_5_days) > 0
@@ -1187,16 +1187,16 @@ SELECT
         ELSE NULL
     END AS days_until_stock_depletes,
     
-    -- 9. Товары на сумму на складе
-    COALESCE(ROUND((SELECT total_stock_value FROM stock_totals), 2), 0) AS total_stock_value,
+    -- 9. Товары на сумму на складе (целое число)
+    COALESCE(ROUND((SELECT total_stock_value FROM stock_totals)), 0) AS total_stock_value,
     
-    -- 10. Количество добавлений в корзину
-    COALESCE((SELECT total_add_to_cart FROM history_totals), 0) AS total_add_to_cart,
+    -- 10. Количество добавлений в корзину (целое число)
+    COALESCE(ROUND((SELECT total_add_to_cart FROM history_totals)), 0) AS total_add_to_cart,
     
-    -- 11. Затраты на рекламу
-    COALESCE((SELECT total_adv_spend FROM advertising_totals), 0) AS total_adv_spend,
+    -- 11. Затраты на рекламу (целое число)
+    COALESCE(ROUND((SELECT total_adv_spend FROM advertising_totals)), 0) AS total_adv_spend,
     
-    -- 12. Количество активных артикулов
+    -- 12. Количество активных артикулов (целое число)
     COALESCE((SELECT total_active_products FROM active_products), 0) AS total_active_products;
 `;
 

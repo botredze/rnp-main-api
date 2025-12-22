@@ -77,7 +77,6 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
       throw Error('Organization not found');
     }
 
-    console.log(organizations, 'organizations');
     for (const organization of organizations) {
       const apiKey = organization.apiKey;
       this.#initAxios(apiKey);
@@ -114,12 +113,10 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
           if (resultCheckStatus) {
             const getReportResult = await this.#axiosService.get(`${this.#getReportUrl}/${taskId}/download`);
 
-            console.log(getReportResult.data, 'getReportResult');
             if (getReportResult.status === 200) {
               const stockCountReport: Array<ProductStockInfo> = getReportResult.data;
 
               for (const stockData of stockCountReport) {
-                console.log(stockData, stockData.nmId, 'stockData');
                 const product = await this.#productRepository.findOne({ where: { nmID: stockData.nmId } });
 
                 if (!product) {
