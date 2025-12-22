@@ -9,43 +9,49 @@ import {
 } from 'typeorm';
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 
+export interface WarehouseInfo {
+  warehouseName: string;
+  quantity: number;
+}
+
 @Entity({ name: 'stock_count_on_side' })
 export class StockCountOnSideModel {
   @PrimaryGeneratedColumn()
   id: number;
 
-  /** дата среза */
   @Column({ type: 'date' })
   date: Date;
 
-  /** nmId из WB */
-  @Column()
+  @Column({ name: 'nm_id', nullable: true })
   nmId: number;
 
-  @Column({ nullable: true })
+  @Column({ name: 'barcode', nullable: true })
+  barcode: string;
+
+  @Column({ nullable: true, name: 'tech_size' })
   techSize: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'brand' })
   brand: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'subject' })
   subject: string;
 
   /** общее количество на складах WB */
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 0, name: 'quantity_full' })
   quantityFull: number;
 
   /** в пути к клиенту */
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 0, name: 'in_way_to_client' })
   inWayToClient: number;
 
   /** возвраты в пути */
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 0, name: 'in_way_from_client' })
   inWayFromClient: number;
 
-  /** список складов строкой (для быстрого просмотра) */
-  @Column({ type: 'text', nullable: true })
-  warehouseNames: string;
+  /** список складов в виде JSON */
+  @Column({ type: 'jsonb', nullable: true, name: 'warehouses' })
+  warehouses: Array<WarehouseInfo>;
 
   /** связь с продуктом */
   @ManyToOne(() => ProductsModel, (product) => product.stockOnSide, {
@@ -54,7 +60,7 @@ export class StockCountOnSideModel {
   @JoinColumn({ name: 'product_id' })
   product: ProductsModel;
 
-  @Column()
+  @Column({ name: 'product_id' })
   productId: number;
 
   @CreateDateColumn()

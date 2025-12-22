@@ -55,4 +55,17 @@ export class RnpUseCase {
 
     return dailyAnalytics;
   }
+
+  async getBasicAnalytics(query: GetProductListQuery) {
+    console.log(query, ' query');
+    const { organizationId } = query;
+
+    if (organizationId === undefined) {
+      throw new Error('Organization id is undefined. Please provide organization id in query params');
+    }
+
+    const organizationBasicMetrics = await this.#analyticsRepository.getBasicAnalytics(organizationId);
+
+    return organizationBasicMetrics;
+  }
 }

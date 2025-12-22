@@ -58,7 +58,7 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
           if (taskStatus === 'done') return true;
           if (taskStatus === 'canceled') return false;
 
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+          await new Promise((resolve) => setTimeout(resolve, 10000));
         }
       } catch (error) {
         console.log(error, 'error');
@@ -77,6 +77,7 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
       throw Error('Organization not found');
     }
 
+    console.log(organizations, 'organizations');
     for (const organization of organizations) {
       const apiKey = organization.apiKey;
       this.#initAxios(apiKey);
@@ -85,21 +86,40 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
         throw Error('API key not found for organization');
       }
 
+      const params = new URLSearchParams();
+
+      // locale
+      params.set('locale', 'ru'); // ru | en | zh
+
+      // groupBy*
+      params.set('groupByBrand', 'false');
+      params.set('groupBySubject', 'false');
+      params.set('groupBySa', 'true');
+      params.set('groupByNm', 'true');
+      params.set('groupByBarcode', 'true');
+      params.set('groupBySize', 'true');
+
+      // filters
+      params.set('filterPics', '0'); // -1 | 0 | 1
+      params.set('filterVolume', '0'); // -1 | 0 | 3
+
       try {
-        const createReportResponse = await this.#axiosService.get(this.#createTaskUrl);
+        const createReportResponse = await this.#axiosService.get(this.#createTaskUrl, { params });
 
         if (createReportResponse.status === 200) {
-          const taskId = createReportResponse.data.taskId;
+          const taskId = createReportResponse?.data?.data?.taskId;
 
           const resultCheckStatus = await this.waitForTaskDone(taskId);
 
           if (resultCheckStatus) {
             const getReportResult = await this.#axiosService.get(`${this.#getReportUrl}/${taskId}/download`);
 
+            console.log(getReportResult.data, 'getReportResult');
             if (getReportResult.status === 200) {
               const stockCountReport: Array<ProductStockInfo> = getReportResult.data;
 
               for (const stockData of stockCountReport) {
+                console.log(stockData, stockData.nmId, 'stockData');
                 const product = await this.#productRepository.findOne({ where: { nmID: stockData.nmId } });
 
                 if (!product) {
@@ -129,11 +149,12 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
                   nmId: stockData.nmId,
                   techSize: stockData.techSize,
                   brand: stockData.brand,
+                  barcode: stockData.barcode,
                   subject: stockData.subjectName,
                   quantityFull: totalQuantity,
                   inWayToClient,
                   inWayFromClient,
-                  warehouseNames: stockData.warehouses?.map((w) => w.warehouseName).join(', '),
+                  warehouses: stockData.warehouses,
                   productId: product.id,
                 });
 

@@ -19,4 +19,9 @@ export class RnpStatisticController {
   async getMainRnpStats(@Query() query: GetRnpAnalyticsDto) {
     return await this.#rnpMainUseCase.getRnpAnalytics(query);
   }
+
+  @Get('basic')
+  async getBasicAnalytics(@Query() query: GetProductListQuery) {
+    return await this.#rnpMainUseCase.getBasicAnalytics(query);
+  }
 }

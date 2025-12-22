@@ -22,7 +22,7 @@ export class GetUserOrganizationsDto {
   @IsNumber()
   organizationId?: number;
 
-  action: 'diactive' | 'active' | 'delete';
+  action?: 'diactive' | 'active' | 'delete';
 
   constructor(params: Partial<GetUserOrganizationsDto> = {}) {
     Object.assign(this, params);
