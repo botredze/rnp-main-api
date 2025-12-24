@@ -4,7 +4,6 @@ import { ProductStockInfo } from '@/infrastructure/apps/executor/executors/wbApi
 import { DateTime } from 'luxon';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { OrganizationRepository } from '@/infrastructure/core/typeOrm/repositories/organization.repository';
-import { OrganizationStatuses } from '@/infrastructure/core/typeOrm/models/organizations.model';
 import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
 import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
 
@@ -67,102 +66,89 @@ export class GetStockCountTodayExecutor extends TaskExecutor {
     }
   }
 
-  async execute(): Promise<void> {
-    const organizations = await this.#organizationRepository.findMany({
-      where: { status: OrganizationStatuses.Active },
-    });
+  async execute(apiKey: string): Promise<void> {
+    this.#initAxios(apiKey);
+
     const EXCLUDE = ['В пути до получателей', 'В пути возвраты на склад WB'];
 
-    if (organizations.length === 0) {
-      throw Error('Organization not found');
-    }
+    const params = new URLSearchParams();
 
-    for (const organization of organizations) {
-      const apiKey = organization.apiKey;
-      this.#initAxios(apiKey);
+    // locale
+    params.set('locale', 'ru'); // ru | en | zh
 
-      if (!apiKey) {
-        throw Error('API key not found for organization');
-      }
+    // groupBy*
+    params.set('groupByBrand', 'false');
+    params.set('groupBySubject', 'false');
+    params.set('groupBySa', 'true');
+    params.set('groupByNm', 'true');
+    params.set('groupByBarcode', 'true');
+    params.set('groupBySize', 'true');
 
-      const params = new URLSearchParams();
+    // filters
+    params.set('filterPics', '0'); // -1 | 0 | 1
+    params.set('filterVolume', '0'); // -1 | 0 | 3
 
-      // locale
-      params.set('locale', 'ru'); // ru | en | zh
+    try {
+      const createReportResponse = await this.#axiosService.get(this.#createTaskUrl, { params });
 
-      // groupBy*
-      params.set('groupByBrand', 'false');
-      params.set('groupBySubject', 'false');
-      params.set('groupBySa', 'true');
-      params.set('groupByNm', 'true');
-      params.set('groupByBarcode', 'true');
-      params.set('groupBySize', 'true');
+      if (createReportResponse.status === 200) {
+        const taskId = createReportResponse?.data?.data?.taskId;
 
-      // filters
-      params.set('filterPics', '0'); // -1 | 0 | 1
-      params.set('filterVolume', '0'); // -1 | 0 | 3
+        const resultCheckStatus = await this.waitForTaskDone(taskId);
 
-      try {
-        const createReportResponse = await this.#axiosService.get(this.#createTaskUrl, { params });
+        if (resultCheckStatus) {
+          const getReportResult = await this.#axiosService.get(`${this.#getReportUrl}/${taskId}/download`);
 
-        if (createReportResponse.status === 200) {
-          const taskId = createReportResponse?.data?.data?.taskId;
+          if (getReportResult.status === 200) {
+            const stockCountReport: Array<ProductStockInfo> = getReportResult.data;
 
-          const resultCheckStatus = await this.waitForTaskDone(taskId);
+            for (const stockData of stockCountReport) {
+              const product = await this.#productRepository.findOne({ where: { nmID: stockData.nmId } });
 
-          if (resultCheckStatus) {
-            const getReportResult = await this.#axiosService.get(`${this.#getReportUrl}/${taskId}/download`);
-
-            if (getReportResult.status === 200) {
-              const stockCountReport: Array<ProductStockInfo> = getReportResult.data;
-
-              for (const stockData of stockCountReport) {
-                const product = await this.#productRepository.findOne({ where: { nmID: stockData.nmId } });
-
-                if (!product) {
-                  throw Error('Product not found');
-                }
-
-                let inWayToClient = 0;
-                let inWayFromClient = 0;
-                let totalQuantity = 0;
-
-                for (const warehouseItem of stockData.warehouses ?? []) {
-                  const name = warehouseItem.warehouseName;
-                  const qty = warehouseItem.quantity ?? 0;
-
-                  if (name === 'В пути до получателей') {
-                    inWayToClient += qty;
-                  } else if (name === 'В пути возвраты на склад WB') {
-                    inWayFromClient += qty;
-                  } else if (!EXCLUDE.includes(name)) {
-                    totalQuantity += qty;
-                  }
-                }
-                const todayDate = DateTime.now().toJSDate();
-
-                const stockSavePayload = new StockCountOnSideModel({
-                  date: todayDate,
-                  nmId: stockData.nmId,
-                  techSize: stockData.techSize,
-                  brand: stockData.brand,
-                  barcode: stockData.barcode,
-                  subject: stockData.subjectName,
-                  quantityFull: totalQuantity,
-                  inWayToClient,
-                  inWayFromClient,
-                  warehouses: stockData.warehouses,
-                  productId: product.id,
-                });
-
-                await this.#stockOnSiteRepository.create(stockSavePayload);
+              if (!product) {
+                console.log('product not found,', stockData.nmId);
+                continue;
               }
+
+              let inWayToClient = 0;
+              let inWayFromClient = 0;
+              let totalQuantity = 0;
+
+              for (const warehouseItem of stockData.warehouses ?? []) {
+                const name = warehouseItem.warehouseName;
+                const qty = warehouseItem.quantity ?? 0;
+
+                if (name === 'В пути до получателей') {
+                  inWayToClient += qty;
+                } else if (name === 'В пути возвраты на склад WB') {
+                  inWayFromClient += qty;
+                } else if (!EXCLUDE.includes(name)) {
+                  totalQuantity += qty;
+                }
+              }
+              const todayDate = DateTime.now().toJSDate();
+
+              const stockSavePayload = new StockCountOnSideModel({
+                date: todayDate,
+                nmId: stockData.nmId,
+                techSize: stockData.techSize,
+                brand: stockData.brand,
+                barcode: stockData.barcode,
+                subject: stockData.subjectName,
+                quantityFull: totalQuantity,
+                inWayToClient,
+                inWayFromClient,
+                warehouses: stockData.warehouses,
+                productId: product.id,
+              });
+
+              await this.#stockOnSiteRepository.create(stockSavePayload);
             }
           }
         }
-      } catch (error) {
-        console.log(error, 'error');
       }
+    } catch (error) {
+      console.log(error, 'error');
     }
   }
 }
