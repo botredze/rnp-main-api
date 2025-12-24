@@ -32,6 +32,9 @@ import { UserModule } from '@/infrastructure/apps/main/modules/users/user.module
 import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
 import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
 import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
+import { ReportsModule } from '@/infrastructure/apps/main/modules/reports/reports.module';
+import { FinanceReportsModel } from '@/infrastructure/core/typeOrm/models/financeReports.model';
+import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/financeReportReady.model';
 
 @Module({
   imports: [
@@ -83,6 +86,8 @@ import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stoc
             SalePlanSettingsModel,
             NotesModel,
             StockCountOnSideModel,
+            FinanceReportsModel,
+            FinanceReportReadyModel,
           ],
           synchronize: true,
           logging: dbDebug,
@@ -105,6 +110,7 @@ import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stoc
     OrganizationModule,
     RnpStatisticModule,
     UserModule,
+    ReportsModule,
   ],
   controllers: [],
   providers: [

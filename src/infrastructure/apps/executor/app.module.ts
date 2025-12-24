@@ -26,6 +26,8 @@ import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models
 import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
 import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
 import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
+import { FinanceReportsModel } from '@/infrastructure/core/typeOrm/models/financeReports.model';
+import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/financeReportReady.model';
 
 @Module({
   imports: [
@@ -78,6 +80,8 @@ import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stoc
             SalePlanSettingsModel,
             NotesModel,
             StockCountOnSideModel,
+            FinanceReportsModel,
+            FinanceReportReadyModel,
           ],
           synchronize: false,
         };
