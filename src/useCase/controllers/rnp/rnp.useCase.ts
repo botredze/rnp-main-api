@@ -44,16 +44,27 @@ export class RnpUseCase {
   }
 
   async getRnpAnalytics(query: GetRnpAnalyticsDto) {
-    const { productId } = query;
-    const { responseStartDate, responseEndDate } = this.#rnpActions.getRnpTimePeriod(query);
+    const { productId, periodTypes } = query;
 
-    const dailyAnalytics = await this.#analyticsRepository.getDailyAnalytics(
-      responseStartDate,
-      responseEndDate,
-      productId,
-    );
+    let responseStartDate: string;
+    let responseEndDate: string;
 
-    return dailyAnalytics;
+    if (periodTypes === 'allTime') {
+      const bounds = await this.#analyticsRepository.getHistoryDateBoundsByProduct(productId);
+
+      if (!bounds.startDate || !bounds.endDate) {
+        return [];
+      }
+
+      responseStartDate = bounds.startDate;
+      responseEndDate = bounds.endDate;
+    } else {
+      const period = this.#rnpActions.getRnpTimePeriod(query);
+      responseStartDate = period.responseStartDate;
+      responseEndDate = period.responseEndDate;
+    }
+
+    return this.#analyticsRepository.getDailyAnalytics(responseStartDate, responseEndDate, productId);
   }
 
   async getBasicAnalytics(query: GetProductListQuery) {

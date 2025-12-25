@@ -25,6 +25,9 @@ import { NotesModel } from '@/infrastructure/core/typeOrm/models/notes.model';
 import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
 import { FinanceReportsModel } from '@/infrastructure/core/typeOrm/models/financeReports.model';
 import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/financeReportReady.model';
+import { ProductCostPriceModel } from '@/infrastructure/core/typeOrm/models/productCostPrice.model';
+import { OtherExpensesModel } from '@/infrastructure/core/typeOrm/models/otherExpenses.model';
+import { ExpensesArticlesModel } from '@/infrastructure/core/typeOrm/models/expensesArticles.model';
 
 @Module({
   imports: [
@@ -74,6 +77,9 @@ import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/fi
             StockCountOnSideModel,
             FinanceReportsModel,
             FinanceReportReadyModel,
+            ProductCostPriceModel,
+            OtherExpensesModel,
+            ExpensesArticlesModel,
           ],
           synchronize: false,
         };

@@ -21,37 +21,39 @@ export class RnpAction {
     let responseStartDate: string;
     let responseEndDate: string;
 
-    const yesterday = DateTime.now().minus({ days: 1 }); // вчера
+    // ВАЖНО: UTC
+    const todayUtc = DateTime.now().setZone('utc').startOf('day');
+    const yesterdayUtc = todayUtc.minus({ days: 1 });
 
     switch (periodTypes) {
       case 'custom':
         responseStartDate = startDate!;
-        responseEndDate = DateTime.fromISO(endDate!).plus({ days: 1 }).toISODate();
+        responseEndDate = endDate!;
         break;
 
       case 'day':
-        responseStartDate = yesterday.toISODate();
-        responseEndDate = yesterday.plus({ days: 1 }).toISODate();
+        responseStartDate = yesterdayUtc.toISODate();
+        responseEndDate = yesterdayUtc.toISODate();
         break;
 
       case 'week':
-        responseStartDate = yesterday.minus({ days: 6 }).toISODate(); // последние 7 дней
-        responseEndDate = yesterday.plus({ days: 0 }).toISODate();
+        responseStartDate = yesterdayUtc.minus({ days: 6 }).toISODate();
+        responseEndDate = yesterdayUtc.toISODate();
         break;
 
       case 'month':
-        responseStartDate = yesterday.minus({ days: 28 }).toISODate(); // последние 30 дней
-        responseEndDate = yesterday.plus({ days: 0 }).toISODate();
+        responseStartDate = yesterdayUtc.minus({ days: 29 }).toISODate();
+        responseEndDate = yesterdayUtc.toISODate();
         break;
 
       case 'quarter':
-        responseStartDate = yesterday.minus({ days: 89 }).toISODate(); // последние 90 дней
-        responseEndDate = yesterday.plus({ days: 0 }).toISODate();
+        responseStartDate = yesterdayUtc.minus({ days: 89 }).toISODate();
+        responseEndDate = yesterdayUtc.toISODate();
         break;
 
       case 'allTime':
-        responseStartDate = '2025-01-01';
-        responseEndDate = yesterday.plus({ days: 0 }).toISODate();
+        responseStartDate = '1970-01-01';
+        responseEndDate = yesterdayUtc.toISODate();
         break;
     }
 

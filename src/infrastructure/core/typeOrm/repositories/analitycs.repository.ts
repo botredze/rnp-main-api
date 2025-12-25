@@ -468,6 +468,7 @@ export class AnalyticsRepository {
   //   }
 
   async getDailyAnalytics(startDate: string, endDate: string, productId: number) {
+    console.log(startDate, endDate);
     const query = `
 WITH dates AS (
     SELECT generate_series(
@@ -495,7 +496,6 @@ history_daily AS (
     GROUP BY 1
 ),
 
--- НОВЫЙ БЛОК: берем данные из stock_count_on_side
 stock_on_side_daily AS (
     SELECT
         DATE(scos.date) AS day,
@@ -504,18 +504,6 @@ stock_on_side_daily AS (
         SUM(scos.in_way_from_client) AS in_way_from_client
     FROM stock_count_on_side scos
     WHERE scos.product_id = $3
-    GROUP BY 1
-),
-
-stock_daily AS (
-    SELECT
-        DATE(sc.date) AS day,
-        SUM(sc.stock_count) AS stock_count,
-        SUM(sc.stock_sum) AS stock_sum,
-        AVG(sc.avg_orders_by_mouth) AS avg_orders_by_mouth,
-        SUM(sc.quantity) AS quantity
-    FROM stock_counts sc
-    WHERE sc.product_id = $3
     GROUP BY 1
 ),
 
@@ -594,13 +582,10 @@ daily_data AS (
         COALESCE(h.avg_card_to_order_conversion, 0) AS avg_card_to_order_conversion,
         COALESCE(h.avg_add_to_wishlist, 0) AS avg_add_to_wishlist,
 
-        -- ИЗМЕНЕННЫЕ ОСТАТКИ: теперь из stock_count_on_side
+        -- Остатки из stock_count_on_side
         COALESCE(scos.stock_total, 0) AS stock_total,
         COALESCE(scos.in_way_to_client, 0) AS in_way_to_client,
         COALESCE(scos.in_way_from_client, 0) AS in_way_from_client,
-        COALESCE(st.stock_count, 0) AS stock_count,
-        COALESCE(st.stock_sum, 0) AS stock_sum,
-        COALESCE(st.avg_orders_by_mouth, 0) AS avg_orders_by_mouth,
 
         -- Реклама
         COALESCE(a.adv_spend, 0) AS adv_spend,
@@ -617,18 +602,19 @@ daily_data AS (
 
         -- Прогнозы
         CASE 
-            WHEN sma.avg_sales_per_day IS NULL OR sma.avg_sales_per_day = 0 OR hma.avg_buy_out_ratio = 0 OR st.stock_count IS NULL THEN NULL
-            ELSE ROUND(st.stock_count / (sma.avg_sales_per_day * hma.avg_buy_out_ratio))
+            WHEN sma.avg_sales_per_day IS NULL OR sma.avg_sales_per_day = 0 
+                 OR hma.avg_buy_out_ratio = 0 OR scos.stock_total IS NULL THEN NULL
+            ELSE ROUND(scos.stock_total / (sma.avg_sales_per_day * hma.avg_buy_out_ratio))
         END AS days_to_finish,
-
+        
         CASE
-            WHEN sma.avg_sales_per_day IS NULL OR sma.avg_sales_per_day = 0 OR hma.avg_buy_out_ratio = 0 OR st.stock_count IS NULL THEN NULL
-            ELSE d.date + (st.stock_count / (sma.avg_sales_per_day * hma.avg_buy_out_ratio))::int
+            WHEN sma.avg_sales_per_day IS NULL OR sma.avg_sales_per_day = 0 
+                 OR hma.avg_buy_out_ratio = 0 OR scos.stock_total IS NULL THEN NULL
+            ELSE d.date + (scos.stock_total / (sma.avg_sales_per_day * hma.avg_buy_out_ratio))::int
         END AS finish_date
 
     FROM dates d
     LEFT JOIN history_daily h ON h.day = d.date
-    LEFT JOIN stock_daily st ON st.day = d.date
     LEFT JOIN stock_on_side_daily scos ON scos.day = d.date
     LEFT JOIN adv_daily a ON a.day = d.date
     LEFT JOIN sales_with_moving_avg sma ON sma.day = d.date
@@ -732,7 +718,7 @@ daily_with_changes AS (
             LAG(avg_add_to_wishlist) OVER w
         ) AS avg_add_to_wishlist_change_percent,
 
-        -- НОВЫЕ ПОЛЯ Остатков
+        -- Остатки из stock_count_on_side
         stock_total,
         percent_change(
             stock_total,
@@ -750,24 +736,6 @@ daily_with_changes AS (
             in_way_from_client,
             LAG(in_way_from_client) OVER w
         ) AS in_way_from_client_change_percent,
-
-        stock_count,
-        percent_change(
-            stock_count,
-            LAG(stock_count) OVER w
-        ) AS stock_count_change_percent,
-
-        stock_sum,
-        percent_change(
-            stock_sum,
-            LAG(stock_sum) OVER w
-        ) AS stock_sum_change_percent,
-
-        avg_orders_by_mouth,
-        percent_change(
-            avg_orders_by_mouth,
-            LAG(avg_orders_by_mouth) OVER w
-        ) AS avg_orders_by_mouth_change_percent,
 
         -- Реклама
         adv_spend,
@@ -887,7 +855,7 @@ SELECT
     ROUND(AVG(avg_add_to_wishlist), 2) AS avg_add_to_wishlist,
     NULL AS avg_add_to_wishlist_change_percent,
     
-    -- НОВЫЕ ПОЛЯ - последние значения остатков
+    -- Остатки - последние значения
     (SELECT stock_total FROM daily_with_changes ORDER BY date DESC LIMIT 1) AS stock_total,
     NULL AS stock_total_change_percent,
 
@@ -896,15 +864,6 @@ SELECT
 
     (SELECT in_way_from_client FROM daily_with_changes ORDER BY date DESC LIMIT 1) AS in_way_from_client,
     NULL AS in_way_from_client_change_percent,
-    
-    (SELECT stock_count FROM daily_with_changes ORDER BY date DESC LIMIT 1) AS stock_count,
-    NULL AS stock_count_change_percent,
-    
-    SUM(stock_sum) AS stock_sum,
-    NULL AS stock_sum_change_percent,
-    
-    ROUND(AVG(avg_orders_by_mouth), 2) AS avg_orders_by_mouth,
-    NULL AS avg_orders_by_mouth_change_percent,
     
     -- Реклама суммы
     SUM(adv_spend) AS adv_spend,
@@ -1203,5 +1162,25 @@ SELECT
     const result = await this.dataSource.query(query, [organizationId]);
 
     return result[0];
+  }
+
+  async getHistoryDateBoundsByProduct(productId: number): Promise<{
+    startDate: string;
+    endDate: string;
+  }> {
+    const query = `
+    SELECT
+      MIN(DATE(h.date)) AS start_date,
+      MAX(DATE(h.date)) AS end_date
+    FROM history h
+    WHERE h.product_id = $1
+  `;
+
+    const [result] = await this.dataSource.query(query, [productId]);
+
+    return {
+      startDate: result.start_date,
+      endDate: result.end_date,
+    };
   }
 }

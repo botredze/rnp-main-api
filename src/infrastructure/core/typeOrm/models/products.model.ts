@@ -21,6 +21,8 @@ import { AdvertisingModel } from '@/infrastructure/core/typeOrm/models/advertisi
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 import { SalePlanSettingsModel } from '@/infrastructure/core/typeOrm/models/salePlanSettings.model';
 import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
+import { FinanceReportsModel } from '@/infrastructure/core/typeOrm/models/financeReports.model';
+import { ProductCostPriceModel } from '@/infrastructure/core/typeOrm/models/productCostPrice.model';
 
 export enum ProductStatuses {
   DELETED = 'deleted',
@@ -98,6 +100,12 @@ export class ProductsModel {
 
   @OneToMany(() => StockCountOnSideModel, (stock) => stock.product)
   stockOnSide?: Array<StockCountOnSideModel>;
+
+  @OneToMany(() => FinanceReportsModel, (finance) => finance.product)
+  financeReport?: Array<FinanceReportsModel>;
+
+  @OneToMany(() => ProductCostPriceModel, (costPrice) => costPrice.product)
+  costPrices: Array<ProductCostPriceModel>;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;

@@ -35,6 +35,9 @@ import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stoc
 import { ReportsModule } from '@/infrastructure/apps/main/modules/reports/reports.module';
 import { FinanceReportsModel } from '@/infrastructure/core/typeOrm/models/financeReports.model';
 import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/financeReportReady.model';
+import { ProductCostPriceModel } from '@/infrastructure/core/typeOrm/models/productCostPrice.model';
+import { OtherExpensesModel } from '@/infrastructure/core/typeOrm/models/otherExpenses.model';
+import { ExpensesArticlesModel } from '@/infrastructure/core/typeOrm/models/expensesArticles.model';
 
 @Module({
   imports: [
@@ -88,6 +91,9 @@ import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/fi
             StockCountOnSideModel,
             FinanceReportsModel,
             FinanceReportReadyModel,
+            ProductCostPriceModel,
+            OtherExpensesModel,
+            ExpensesArticlesModel,
           ],
           synchronize: true,
           logging: dbDebug,
