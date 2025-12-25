@@ -22,6 +22,7 @@ import { ProductMetricsRepository } from '@/infrastructure/core/typeOrm/reposito
 import { WbDailyControllerExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/wbDailyController.executor';
 import { MetricsExecutor } from '@/infrastructure/apps/executor/executors/productMetrics/metrics.executor';
 import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
+import { SchedulerRepository } from '@/infrastructure/core/typeOrm/repositories/scheduler.repository';
 
 @Injectable()
 export class TaskExecutorFactory {
@@ -43,6 +44,7 @@ export class TaskExecutorFactory {
     private readonly stockCountRepository: StockCountRepository,
     private readonly productMetricsRepository: ProductMetricsRepository,
     private readonly stockOnSiteRepository: StockCountOnSideRepository,
+    private readonly schedulerRepository: SchedulerRepository,
   ) {}
 
   create(taskName: TaskName): TaskExecutor {
@@ -66,6 +68,7 @@ export class TaskExecutorFactory {
         this.configService,
         this.stockCountRepository,
         this.stockOnSiteRepository,
+        this.schedulerRepository,
       );
     }
 

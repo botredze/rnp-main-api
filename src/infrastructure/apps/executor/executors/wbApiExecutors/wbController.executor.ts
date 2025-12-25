@@ -1,22 +1,42 @@
 import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecutor';
 import { OrganizationRepository } from '@/infrastructure/core/typeOrm/repositories/organization.repository';
 import { OrganizationStatuses } from '@/infrastructure/core/typeOrm/models/organizations.model';
-import { GetProductsExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProducts.executor';
+import {
+  GetProductsExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProducts.executor';
 import { GetStocksExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStocks.executor';
 import { GetSalesExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getSales.executor';
-import { GetAdvertingPaymentHistoryExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingPaymentHistory.executor';
-import { GetStockReportExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockReport.executor';
-import { GetOrganizationInfoExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getOrganizationInfo.executor';
-import { GetAdvertingListExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingList.executor';
-import { GetAdvertingHistoryExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingHistory.executor';
+import {
+  GetAdvertingPaymentHistoryExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingPaymentHistory.executor';
+import {
+  GetStockReportExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockReport.executor';
+import {
+  GetOrganizationInfoExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getOrganizationInfo.executor';
+import {
+  GetAdvertingListExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingList.executor';
+import {
+  GetAdvertingHistoryExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getAdvertingHistory.executor';
 import { GetOrdersExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getOrders.executor';
-import { GetProductStatisticExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProductStatistic.executor';
+import {
+  GetProductStatisticExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProductStatistic.executor';
 import { AdvertInfoRepository } from '@/infrastructure/core/typeOrm/repositories/advestingInfo.repository';
-import { AdvestingDayStatisticRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayStatistic.repository';
+import {
+  AdvestingDayStatisticRepository
+} from '@/infrastructure/core/typeOrm/repositories/advestingDayStatistic.repository';
 import { AdvestingDayAppsRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayApps.repository';
-import { AdvestingDayAppsNmsRepository } from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
+import {
+  AdvestingDayAppsNmsRepository
+} from '@/infrastructure/core/typeOrm/repositories/advestingDayAppsNms.repository';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
-import { AdvestingCostHistoryRepository } from '@/infrastructure/core/typeOrm/repositories/advestingCostHistory.repository';
+import {
+  AdvestingCostHistoryRepository
+} from '@/infrastructure/core/typeOrm/repositories/advestingCostHistory.repository';
 import { OrderRepository } from '@/infrastructure/core/typeOrm/repositories/order.repository';
 import { HistoryRepository } from '@/infrastructure/core/typeOrm/repositories/history.repository';
 import { SalesRepository } from '@/infrastructure/core/typeOrm/repositories/sales.repository';
@@ -24,7 +44,10 @@ import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/sto
 import { ConfigService } from '@nestjs/config';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
 import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
-import { GetStockCountTodayExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockCountToday.executor';
+import {
+  GetStockCountTodayExecutor
+} from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockCountToday.executor';
+import { SchedulerRepository } from '@/infrastructure/core/typeOrm/repositories/scheduler.repository';
 
 export class WbControllerExecutor extends TaskExecutor {
   readonly #configService: ConfigService;
@@ -41,6 +64,7 @@ export class WbControllerExecutor extends TaskExecutor {
   readonly #stockRepository: StocksRepository;
   readonly #stockReportRepository: StockCountRepository;
   readonly #stockOnSiteRepository: StockCountOnSideRepository;
+  readonly #schedulerRepository: SchedulerRepository;
 
   // executors
   readonly #getOrganizationInfoExecutor: GetOrganizationInfoExecutor;
@@ -70,6 +94,7 @@ export class WbControllerExecutor extends TaskExecutor {
     configService: ConfigService,
     stockReportRepository: StockCountRepository,
     stockOnSiteRepository: StockCountOnSideRepository,
+    schedulerRepository: SchedulerRepository,
   ) {
     super();
 
@@ -88,6 +113,7 @@ export class WbControllerExecutor extends TaskExecutor {
     this.#configService = configService;
     this.#stockReportRepository = stockReportRepository;
     this.#stockOnSiteRepository = stockOnSiteRepository;
+    this.#schedulerRepository = schedulerRepository;
 
     // executors (создаём после инициализации репозиториев)
     this.#getOrganizationInfoExecutor = new GetOrganizationInfoExecutor(
@@ -149,6 +175,8 @@ export class WbControllerExecutor extends TaskExecutor {
         await this.#organizationRepository.updateById(id, {
           status: OrganizationStatuses.Active,
         });
+
+        await this.#schedulerRepository.delete({ name: `organization_init_executor:${organization.id}` });
       }
     }
 

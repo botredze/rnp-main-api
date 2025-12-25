@@ -3,7 +3,7 @@ import { SchedularTasksModel } from '@/infrastructure/core/typeOrm/models/schedu
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-export class SchedulerRepository extends TypeOrmRepository<SchedularTasksModel>{
+export class SchedulerRepository extends TypeOrmRepository<SchedularTasksModel> {
   constructor(@InjectRepository(SchedularTasksModel) repository: Repository<SchedularTasksModel>) {
     super(repository);
   }

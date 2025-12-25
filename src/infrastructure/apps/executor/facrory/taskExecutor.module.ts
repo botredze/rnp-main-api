@@ -35,6 +35,7 @@ import { ProductMetricsRepository } from '@/infrastructure/core/typeOrm/reposito
 import { ProductLogAndStrategyModel } from '@/infrastructure/core/typeOrm/models/productLogAndStrategy.model';
 import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
 import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stockCountOnSide.model';
+import { SchedulerRepository } from '@/infrastructure/core/typeOrm/repositories/scheduler.repository';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { StockCountOnSideModel } from '@/infrastructure/core/typeOrm/models/stoc
     StockCountRepository,
     ProductMetricsRepository,
     StockCountOnSideRepository,
+    SchedulerRepository,
 
     {
       provide: 'QUEUE_SERVICE',
