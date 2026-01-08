@@ -1,4 +1,3 @@
-// useCase/controllers/reports/reports.useCase.ts
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { FinanceReportsRepository } from '@/infrastructure/core/typeOrm/repositories/financeReports.repository';
 import {
@@ -225,7 +224,7 @@ export class ReportsUseCase {
    * Получить доступные даты отчетов
    */
   async getAvailableDates(organizationId: number): Promise<AvailableDatesResponse> {
-    const dateRange = await this.#weeklyReportRepository.getDateRange(organizationId);
+    const dateRange = await this.#financeRepository.getDateRange(organizationId);
 
     if (!dateRange) {
       return {
@@ -235,7 +234,7 @@ export class ReportsUseCase {
       };
     }
 
-    const months: string[] = [];
+    const months: Array<string> = [];
     let currentDate = startOfMonth(dateRange.minDate);
     const endDate = endOfMonth(dateRange.maxDate);
 
@@ -252,6 +251,7 @@ export class ReportsUseCase {
   }
 
   async getOrganizationDashboard(dto: GetDashboardDto): Promise<DashboardResponse> {
+    console.log(dto, 'dto');
     const { organizationId, startDate, endDate } = dto;
 
     const start = startDate ? new Date(startDate) : startOfMonth(new Date());
@@ -275,7 +275,6 @@ export class ReportsUseCase {
       endDate: end,
     });
 
-    // Все расчеты уже выполнены в SQL, просто используем результаты
     const revenue = detailedStats.totalRevenue;
     const wbCommission = weeklyMetrics.totalSales - weeklyMetrics.totalToPay - weeklyMetrics.totalLogistics;
     const wbDeductions =

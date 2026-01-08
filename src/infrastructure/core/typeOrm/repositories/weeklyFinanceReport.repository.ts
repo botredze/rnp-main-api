@@ -111,22 +111,6 @@ export class WeeklyFinanceReportRepository extends TypeOrmRepository<WeeklyFinan
     }));
   }
 
-  async getDateRange(organizationId: number): Promise<{ minDate: Date; maxDate: Date } | null> {
-    const result = await this.repository
-      .createQueryBuilder('report')
-      .select('MIN(report.startDate)', 'minDate')
-      .addSelect('MAX(report.endDate)', 'maxDate')
-      .where('report.organizationId = :organizationId', { organizationId })
-      .getRawOne();
-
-    if (!result || !result.minDate) return null;
-
-    return {
-      minDate: result.minDate,
-      maxDate: result.maxDate,
-    };
-  }
-
   async reportExists(params: { organizationId: number; reportNumber: string }): Promise<boolean> {
     const { organizationId, reportNumber } = params;
 

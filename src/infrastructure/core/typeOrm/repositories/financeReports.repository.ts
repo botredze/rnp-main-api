@@ -90,7 +90,6 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
   }): Promise<WeeklyDetailedStats[]> {
     const { organizationId, weeks } = params;
 
-    // Создаем UNION запрос для каждой недели
     const queries = weeks.map((week, index) => {
       return `
         SELECT 
@@ -404,10 +403,8 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
       );
     }
 
-    // Получаем общее количество
     const total = await query.getCount();
 
-    // Получаем данные с пагинацией
     const data = await query
       .orderBy('report.saleDate', 'DESC')
       .addOrderBy('report.id', 'DESC')
@@ -439,7 +436,6 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
         organizationId: filters.organizationId,
       });
 
-    // Применяем те же фильтры
     if (filters.startDate && filters.endDate) {
       query = query.andWhere('report.saleDate BETWEEN :startDate AND :endDate', {
         startDate: filters.startDate,
@@ -482,8 +478,8 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
   }
 
   async getFilterOptions(organizationId: number): Promise<{
-    sizes: string[];
-    warehouses: string[];
+    sizes: Array<string>;
+    warehouses: Array<string>;
   }> {
     const sizesResult = await this.repository
       .createQueryBuilder('report')
