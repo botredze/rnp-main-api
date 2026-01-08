@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,6 +13,7 @@ import {
 import { ProductsModel } from '@/infrastructure/core/typeOrm/models/products.model';
 
 @Entity({ name: 'finance_reports' })
+@Index(['productId', 'saleDate', 'srid', 'documentType'], { unique: true })
 export class FinanceReportsModel {
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;

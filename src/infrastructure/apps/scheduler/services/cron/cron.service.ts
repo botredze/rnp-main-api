@@ -34,17 +34,23 @@ export class CronService {
   }
 
   stopCronJob(name: string) {
-    const job = this.schedulerRegistry.getCronJob(name);
-    if (job) {
-      job.stop();
-      this.logger.warn(`Job ${name} остановлен`);
-    } else {
-      this.logger.error(`Job ${name} не найден`);
+    try {
+      const job = this.schedulerRegistry.getCronJob(name);
+      if (job) {
+        job.stop();
+        this.logger.warn(`Job ${name} остановлен`);
+      }
+    } catch (error) {
+      this.logger.warn(`Job ${name} не найден`);
     }
   }
 
   deleteCronJob(name: string) {
-    this.schedulerRegistry.deleteCronJob(name);
-    this.logger.warn(`Job ${name} удален`);
+    try {
+      this.schedulerRegistry.deleteCronJob(name);
+      this.logger.warn(`Job ${name} удален`);
+    } catch (error) {
+      this.logger.warn(`Job ${name} не найден для удаления`);
+    }
   }
 }
