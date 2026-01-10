@@ -128,6 +128,7 @@ export class WbDailyControllerExecutor extends TaskExecutor {
       where: { status: OrganizationStatuses.Active },
     });
 
+    console.log(activeOrganizations, 'activeOrganizations');
     for (const organization of activeOrganizations) {
       const { apiKey, id, organizationName } = organization;
 

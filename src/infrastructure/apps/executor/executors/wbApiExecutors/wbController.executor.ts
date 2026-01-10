@@ -132,6 +132,8 @@ export class WbControllerExecutor extends TaskExecutor {
       where: { status: OrganizationStatuses.Inited },
     });
 
+    console.log(initialOrganizations, 'initialOrganizations');
+
     for (const organization of initialOrganizations) {
       const { apiKey, id, organizationName } = organization;
 
@@ -154,7 +156,7 @@ export class WbControllerExecutor extends TaskExecutor {
           status: OrganizationStatuses.Active,
         });
 
-        await this.#schedulerRepository.delete({ name: `organization_init_executor:${organization.id}` });
+        console.log(`Организация ${organizationName} успешно инициализирована`);
       }
     }
 

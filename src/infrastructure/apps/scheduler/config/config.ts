@@ -12,6 +12,6 @@ const CRON_RULES = {
 export const defaultScheduledTasks = [
   {
     name: 'update_organization_info',
-    scheduleRule: '0 0 * * *',
+    scheduleRule: '0 0 3 * * *', // Каждый день в 3:00 ночи
   },
 ];

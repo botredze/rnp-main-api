@@ -48,6 +48,7 @@ export class TaskExecutorFactory {
   ) {}
 
   create(taskName: TaskName): TaskExecutor {
+    console.log(taskName, 'taskName');
     if (taskName.startsWith(TaskName.OrganizationInitExecutor)) {
       const parts = taskName.split(':');
       const orgId = parts[1] ? Number(parts[1]) : null;

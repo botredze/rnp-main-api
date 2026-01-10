@@ -66,9 +66,10 @@ export class OrganizationUseCase {
         name: `organization_init_executor:${organization.id}`,
         scheduleRule: '0 0 * * *',
         status: 'active',
+        runAfter: 0, // Запустить немедленно
       });
 
-      this.#schedularRepository.create(taskPayload);
+      await this.#schedularRepository.create(taskPayload);
       this.#eventEmitter.emit('schedular.tasks.updated');
     }
     return organization;
@@ -91,14 +92,19 @@ export class OrganizationUseCase {
     const result = await this.#organizationRepository.updateById(id, payload);
 
     if (result) {
+      // Удаляем старую задачу инициализации (если есть)
+      await this.#schedularRepository.delete({ name: `organization_init_executor:${organization.id}` });
+
+      // Создаем новую задачу для немедленной инициализации
       const taskPayload = new SchedularTasksModel({
         name: `organization_init_executor:${organization.id}`,
         scheduleRule: '0 0 * * *',
         status: 'active',
+        runAfter: 0, // Запустить немедленно
       });
 
+      await this.#schedularRepository.create(taskPayload);
       this.#eventEmitter.emit('schedular.tasks.updated');
-      this.#schedularRepository.create(taskPayload);
     }
 
     return result;

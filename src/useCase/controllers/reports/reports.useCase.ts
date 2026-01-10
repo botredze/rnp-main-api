@@ -1,8 +1,6 @@
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { FinanceReportsRepository } from '@/infrastructure/core/typeOrm/repositories/financeReports.repository';
-import {
-  WeeklyFinanceReportRepository
-} from '@/infrastructure/core/typeOrm/repositories/weeklyFinanceReport.repository';
+import { WeeklyFinanceReportRepository } from '@/infrastructure/core/typeOrm/repositories/weeklyFinanceReport.repository';
 import {
   AvailableDatesResponse,
   DashboardMetric,
@@ -251,7 +249,6 @@ export class ReportsUseCase {
   }
 
   async getOrganizationDashboard(dto: GetDashboardDto): Promise<DashboardResponse> {
-    console.log(dto, 'dto');
     const { organizationId, startDate, endDate } = dto;
 
     const start = startDate ? new Date(startDate) : startOfMonth(new Date());
