@@ -38,6 +38,7 @@ export interface GetDashboardDto {
   organizationId: number;
   startDate?: string;
   endDate?: string;
+  taxRate?: number; // Ставка налога (0–1), напр. 0.02 = 2% УСН
 }
 
 // Запрос сводного отчета
@@ -45,6 +46,7 @@ export interface GetSummaryReportDto {
   organizationId: number;
   startDate?: string;
   endDate?: string;
+  taxRate?: number; // Ставка налога (0–1), напр. 0.02 = 2% УСН
 }
 
 // Ответ дашборда
@@ -76,7 +78,6 @@ export interface SalesData {
   sales: number;
   returns: number;
   deliveries: number;
-  returnQty: number;
 }
 
 export interface AvgData {
@@ -92,14 +93,19 @@ export interface FinanceData {
   revenue: number;
   commission: number;
   commissionPct: string;
+  acquiring: number;
   transfer: number;
   deliveryCost: number;
+  deliveryCostForward: number;
+  deliveryCostReturn: number;
   fines: number;
   acceptance: number;
   deductions: number;
   storage: number;
   totalPay: number;
   cost: number;
+  tax: number;
+  externalExpenses: number;
   profit: number;
 }
 

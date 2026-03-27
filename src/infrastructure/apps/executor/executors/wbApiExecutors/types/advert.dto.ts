@@ -16,6 +16,8 @@ export interface IAdvertDetails {
   changeTime: string;
 }
 
+// ---- Старые типы (устаревший /adv/v1/promotion/adverts, оставлены для справки) ----
+
 export interface IAdvertInfoDetails {
   endTime: string;
   createTime: string;
@@ -52,6 +54,51 @@ export interface IAdvertAutoParams {
 }
 
 export type IAdvertInfoDetailsArray = Array<IAdvertInfoDetails>;
+
+// ---- Новые типы для GET /api/advert/v2/adverts ----
+
+export interface IAdvertV2BidsKopecks {
+  recommendations: number;
+  search: number;
+}
+
+export interface IAdvertV2NmSetting {
+  bids_kopecks: IAdvertV2BidsKopecks;
+  nm_id: number;
+  subject: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface IAdvertV2Settings {
+  name: string;
+  payment_type: string;
+  placements: {
+    recommendations: boolean;
+    search: boolean;
+  };
+}
+
+export interface IAdvertV2Timestamps {
+  created: string;
+  deleted: string;
+  started: string;
+  updated: string;
+}
+
+export interface IAdvertV2InfoDetails {
+  bid_type: string;
+  id: number;
+  nm_settings: Array<IAdvertV2NmSetting>;
+  settings: IAdvertV2Settings;
+  status: number;
+  timestamps: IAdvertV2Timestamps;
+}
+
+export interface IAdvertV2Response {
+  adverts: Array<IAdvertV2InfoDetails>;
+}
 
 
 interface Nm {

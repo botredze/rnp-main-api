@@ -9,6 +9,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private tasks: Array<SchedularTasksModel>;
   private reloadInterval: NodeJS.Timeout;
+  private pollInterval: NodeJS.Timeout;
 
   constructor(
     private readonly scheduledTasksService: ScheduledTasksService,
@@ -21,16 +22,33 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     await this.scheduleTasks();
 
-    // Перезагружать задачи каждый час
+    // Перезагружать cron jobs каждый час
     this.reloadInterval = setInterval(async () => {
       console.log('Перезагрузка задач из БД...');
       await this.scheduleTasks();
     }, 60 * 60 * 1000); // 1 час
+
+    // Проверять новые незапущенные задачи каждую минуту
+    this.pollInterval = setInterval(async () => {
+      await this.executeNewTasks();
+    }, 60 * 1000); // 1 минута
   }
 
   onModuleDestroy() {
     if (this.reloadInterval) {
       clearInterval(this.reloadInterval);
+    }
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
+  }
+
+  private async executeNewTasks() {
+    const tasks = await this.scheduledTasksService.getTasks();
+    for (const task of tasks) {
+      if (!task.lastRunTime && task.status !== 'running') {
+        await this.cronService.executeNow(task.name);
+      }
     }
   }
 
@@ -56,6 +74,11 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       setTimeout(() => {
         this.cronService.addCronJob(task.name, task.scheduleRule);
       }, task.runAfter);
+
+      // Если задача ни разу не запускалась и не в процессе — выполняем немедленно
+      if (!task.lastRunTime && task.status !== 'running') {
+        this.cronService.executeNow(task.name);
+      }
     });
   }
 }

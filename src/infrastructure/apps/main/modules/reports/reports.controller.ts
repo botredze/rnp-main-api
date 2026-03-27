@@ -29,6 +29,16 @@ export class ReportsController {
   }
 
   /**
+   * POST /reports/detailed/preview
+   * Диагностика: возвращает колонки и первые строки Excel без сохранения в БД
+   */
+  @Post('detailed/preview')
+  @UseInterceptors(FileInterceptor('file'))
+  async previewDetailedReport(@UploadedFile() file: Express.Multer.File) {
+    return await this.#reportsUseCase.previewDetailedReport(file);
+  }
+
+  /**
    * POST /reports/weekly/upload
    * Загрузить еженедельный отчет (Ежедневные_отчеты.xlsx)
    */
@@ -58,6 +68,7 @@ export class ReportsController {
       organizationId: Number(dto.organizationId),
       startDate: dto.startDate,
       endDate: dto.endDate,
+      taxRate: dto.taxRate ? Number(dto.taxRate) : 0,
     });
   }
 
@@ -72,6 +83,7 @@ export class ReportsController {
       organizationId: Number(dto.organizationId),
       startDate: dto.startDate,
       endDate: dto.endDate,
+      taxRate: dto.taxRate ? Number(dto.taxRate) : 0,
     });
   }
 

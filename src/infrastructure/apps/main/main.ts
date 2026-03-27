@@ -4,11 +4,17 @@ import { Server } from 'node:http';
 import { AppModule } from './app.module';
 import GlobalExceptionFilter from './exceptionFilters/global.exceptionFilters';
 import { ConfigService } from '@nestjs/config';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication<Server>>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication<Server>>(AppModule, {
+    bodyParser: false,
+  });
 
   app.set('query parser', 'extended');
+
+  app.use(bodyParser.json({ limit: '100mb' }));
+  app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
   const server = app.getHttpServer();
   const { httpAdapter } = app.get(HttpAdapterHost);
@@ -47,8 +53,8 @@ async function bootstrap() {
   });
 
   server.keepAliveTimeout = keepAliveTimeout * 1000;
-  server.headersTimeout = keepAliveTimeout * 1000;
-  server.setTimeout(30 * 1000);
+  server.headersTimeout = (keepAliveTimeout + 1) * 1000;
+  server.setTimeout(120 * 1000); // 120 сек для больших файлов
 
   app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
 

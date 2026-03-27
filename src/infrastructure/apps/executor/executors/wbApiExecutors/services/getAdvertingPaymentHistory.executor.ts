@@ -43,6 +43,8 @@ export class GetAdvertingPaymentHistoryExecutor extends TaskExecutor {
       const to = DateTime.now().toISODate(); // сегодня
       const from = DateTime.now().minus({ days: 30 }).toISODate(); // 30 дней назад
 
+      console.log(`[AdvertPayment] Запрос истории платежей: from=${from}, to=${to}`);
+
       const response = await this.#axiosService.get(this.#baseUrl, {
         params: {
           from,
@@ -52,6 +54,9 @@ export class GetAdvertingPaymentHistoryExecutor extends TaskExecutor {
 
       if (response.status === 200) {
         const paymentHistoryData: Array<AdvertPayHistory> = response.data;
+        console.log(`[AdvertPayment] Получено записей: ${paymentHistoryData.length}`);
+
+        let saved = 0, updated = 0, skipped = 0;
 
         for (const payment of paymentHistoryData) {
           const existingPayment = await this.#advestingCostHistoryRepository.findOne({
@@ -65,6 +70,12 @@ export class GetAdvertingPaymentHistoryExecutor extends TaskExecutor {
             where: { advertId: payment.advertId },
           });
 
+          if (!advertInfo) {
+            console.warn(`[AdvertPayment] Реклама не найдена: advertId=${payment.advertId}, пропускаем`);
+            skipped++;
+            continue;
+          }
+
           const historyPayload = new AdvertisingCostHistoryModel({
             updTime: new Date(payment.updTime),
             updSum: payment.updSum,
@@ -76,15 +87,19 @@ export class GetAdvertingPaymentHistoryExecutor extends TaskExecutor {
 
           if (existingPayment) {
             await this.#advestingCostHistoryRepository.updateById(existingPayment.id, historyPayload);
+            updated++;
           } else {
             await this.#advestingCostHistoryRepository.create(historyPayload);
+            saved++;
           }
         }
-      }
 
-      console.log('История платежей по рекламным компаниям');
+        console.log(`[AdvertPayment] Готово: создано=${saved}, обновлено=${updated}, пропущено=${skipped}`);
+      } else {
+        console.warn(`[AdvertPayment] Неожиданный статус: ${response.status}`);
+      }
     } catch (error) {
-      console.log(error, 'error');
+      console.error('[AdvertPayment] Ошибка:', error?.response?.data || error?.message || error);
     }
   }
 }

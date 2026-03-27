@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { FinanceReportsRepository } from '@/infrastructure/core/typeOrm/repositories/financeReports.repository';
 import { WeeklyFinanceReportRepository } from '@/infrastructure/core/typeOrm/repositories/weeklyFinanceReport.repository';
@@ -15,35 +16,37 @@ import {
   UploadWeeklyReportDto,
 } from '@/shared/dtos/financeReports.dto';
 import { WbFinanceColumns, WbFinanceRow } from '@/shared/dtos/reports.dto';
-import { mapWbRowToFinanceEntity, parseExcel, toNumber } from '@/shared/helpers/exel.parser';
+import { getExcelColumnNames, mapWbRowToFinanceEntity, parseExcel, toNumber } from '@/shared/helpers/exel.parser';
 import { parseWeeklyReportExcel, toDate, WeeklyReportColumns } from '@/shared/helpers/weeklyReport.parser';
 import { BadRequestException } from '@nestjs/common';
 import { eachWeekOfInterval, endOfMonth, endOfWeek, format, startOfMonth } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { UploadedReportsRepository } from '@/infrastructure/core/typeOrm/repositories/uploadedReports.repository';
+import { OtherExpensesRepository } from '@/infrastructure/core/typeOrm/repositories/otherExpenses.repository';
 import { calculateFileHash, createRecordKey } from '@/shared/helpers/fileHash.helper';
 
 export class ReportsUseCase {
+  readonly #logger = new Logger(ReportsUseCase.name);
   readonly #productRepository: ProductRepository;
   readonly #financeRepository: FinanceReportsRepository;
   readonly #weeklyReportRepository: WeeklyFinanceReportRepository;
   readonly #uploadedReportRepository: UploadedReportsRepository;
+  readonly #otherExpensesRepository: OtherExpensesRepository;
 
   constructor(
     productRepository: ProductRepository,
     financeRepository: FinanceReportsRepository,
     weeklyReportRepository: WeeklyFinanceReportRepository,
     uploadedReportRepository: UploadedReportsRepository,
+    otherExpensesRepository: OtherExpensesRepository,
   ) {
     this.#productRepository = productRepository;
     this.#financeRepository = financeRepository;
     this.#weeklyReportRepository = weeklyReportRepository;
     this.#uploadedReportRepository = uploadedReportRepository;
+    this.#otherExpensesRepository = otherExpensesRepository;
   }
 
-  /**
-   * Загрузить еженедельный отчет с защитой от дубликатов
-   */
   async uploadWeeklyReport(file: Express.Multer.File, dto: UploadWeeklyReportDto) {
     if (!file) {
       throw new BadRequestException('Excel file not provided');
@@ -126,9 +129,6 @@ export class ReportsUseCase {
     };
   }
 
-  /**
-   * Загрузить детализированный отчет с защитой от дубликатов
-   */
   async uploadDetailedReport(file: Express.Multer.File, dto: UploadDetailedReportDto) {
     if (!file) {
       throw new BadRequestException('Excel file not provided');
@@ -148,19 +148,32 @@ export class ReportsUseCase {
       );
     }
 
+    const columnNames = getExcelColumnNames(file.buffer);
+    this.#logger.log(`[uploadDetailedReport] orgId=${dto.organizationId}, file="${file.originalname}", columns: ${JSON.stringify(columnNames)}`);
+
     const rows = parseExcel<WbFinanceRow>(file.buffer);
+    this.#logger.log(`[uploadDetailedReport] parsed ${rows.length} rows from Excel`);
 
     const recordsToCreate: Array<{
       entity: any;
       key: string;
     }> = [];
 
+    let skippedNoProduct = 0;
+    const missedNmIds = new Set<number>();
+
     for (const row of rows) {
+      const nmID = toNumber(row[WbFinanceColumns.NOMENCLATURE_CODE]);
+
       const product = await this.#productRepository.findOne({
-        where: { nmID: toNumber(row[WbFinanceColumns.NOMENCLATURE_CODE]) },
+        where: { nmID, organizationId: dto.organizationId },
       });
 
-      if (!product) continue;
+      if (!product) {
+        skippedNoProduct++;
+        if (missedNmIds.size < 10) missedNmIds.add(nmID);
+        continue;
+      }
 
       const entity = mapWbRowToFinanceEntity(row, product.id);
       const key = createRecordKey({
@@ -171,6 +184,12 @@ export class ReportsUseCase {
       });
 
       recordsToCreate.push({ entity, key });
+    }
+
+    if (skippedNoProduct > 0) {
+      this.#logger.warn(
+        `[uploadDetailedReport] skipped ${skippedNoProduct} rows — product not found for nmIDs: ${[...missedNmIds].join(', ')}${missedNmIds.size === 10 ? '...' : ''}`,
+      );
     }
 
     const existingKeys = await this.#financeRepository.checkBatchExists(
@@ -209,18 +228,20 @@ export class ReportsUseCase {
       duplicatesSkipped,
     });
 
+    this.#logger.log(
+      `[uploadDetailedReport] done: saved=${result.length}, duplicates=${duplicatesSkipped}, skippedNoProduct=${skippedNoProduct}, total=${rows.length}`,
+    );
+
     return {
       success: true,
-      message: `Loaded ${result.length} new detailed finance records${duplicatesSkipped > 0 ? `, ${duplicatesSkipped} duplicates skipped` : ''}`,
+      message: `Loaded ${result.length} new detailed finance records${duplicatesSkipped > 0 ? `, ${duplicatesSkipped} duplicates skipped` : ''}${skippedNoProduct > 0 ? `, ${skippedNoProduct} rows skipped (product not found in org)` : ''}`,
       count: result.length,
       duplicatesSkipped,
+      skippedNoProduct,
       totalProcessed: rows.length,
     };
   }
 
-  /**
-   * Получить доступные даты отчетов
-   */
   async getAvailableDates(organizationId: number): Promise<AvailableDatesResponse> {
     const dateRange = await this.#financeRepository.getDateRange(organizationId);
 
@@ -249,36 +270,38 @@ export class ReportsUseCase {
   }
 
   async getOrganizationDashboard(dto: GetDashboardDto): Promise<DashboardResponse> {
-    const { organizationId, startDate, endDate } = dto;
+    const { organizationId, startDate, endDate, taxRate = 0 } = dto;
 
     const start = startDate ? new Date(startDate) : startOfMonth(new Date());
     const end = endDate ? new Date(endDate) : endOfMonth(new Date());
 
-    const weeklyMetrics = await this.#weeklyReportRepository.getDashboardMetrics({
-      organizationId,
-      startDate: start,
-      endDate: end,
-    });
+    const [weeklyMetrics, detailedStats, costPriceData, externalExpenses] = await Promise.all([
+      this.#weeklyReportRepository.getDashboardMetrics({ organizationId, startDate: start, endDate: end }),
+      this.#financeRepository.getDetailedSalesStats({ organizationId, startDate: start, endDate: end }),
+      this.#financeRepository.getCostPriceForPeriod({ organizationId, startDate: start, endDate: end }),
+      this.#otherExpensesRepository.getTotalForPeriod(organizationId, start, end),
+    ]);
 
-    const detailedStats = await this.#financeRepository.getDetailedSalesStats({
-      organizationId,
-      startDate: start,
-      endDate: end,
-    });
+    const revenue = detailedStats.revenue;
+    const sellerPayout = detailedStats.sellerPayout;
+    const wbCommission = detailedStats.wbCommission;
+    const acquiring = detailedStats.acquiring;
+    const delivery = detailedStats.deliveryCost;
+    const storage = weeklyMetrics.totalStorage;
+    const fines = weeklyMetrics.totalFines;
+    const acceptance = weeklyMetrics.totalAcceptanceCost;
+    const otherDeductions = weeklyMetrics.totalOtherCharges;
+    const totalCostPrice = costPriceData.totalCostPrice;
 
-    const costPriceData = await this.#financeRepository.getCostPriceForPeriod({
-      organizationId,
-      startDate: start,
-      endDate: end,
-    });
-
-    const revenue = detailedStats.totalRevenue;
-    const wbCommission = weeklyMetrics.totalSales - weeklyMetrics.totalToPay - weeklyMetrics.totalLogistics;
-    const wbDeductions =
-      wbCommission + weeklyMetrics.totalLogistics + weeklyMetrics.totalStorage + weeklyMetrics.totalFines;
-    const netProfit = revenue - wbDeductions - costPriceData.totalCostPrice;
+    // Оплата на Р/С = К перечислению − логистика − хранение − штрафы − приёмка − удержания
+    const totalToReceive = sellerPayout - delivery - fines - acceptance - otherDeductions - storage;
+    // Налог = Оплата на Р/С × ставка
+    const tax = totalToReceive * taxRate;
+    // ЧП = Оплата на Р/С − налог − себестоимость − внешние расходы
+    const netProfit = totalToReceive - tax - totalCostPrice - externalExpenses;
+    const wbDeductions = wbCommission + delivery + storage + fines + acceptance + otherDeductions;
     const marginality = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-    const totalCosts = wbDeductions + costPriceData.totalCostPrice;
+    const totalCosts = wbDeductions + totalCostPrice + tax + externalExpenses;
     const roi = totalCosts > 0 ? (netProfit / totalCosts) * 100 : 0;
 
     const metrics: DashboardMetric[] = [
@@ -292,67 +315,93 @@ export class ReportsUseCase {
       {
         title: 'Выручка',
         value: `${Math.round(revenue).toLocaleString('ru-RU')} сом`,
-        subtitle: `${detailedStats.totalSalesCount} продаж`,
-        badge: `${detailedStats.totalReturnsCount} возвр.`,
+        subtitle: `${detailedStats.salesQty} прод. / ${detailedStats.returnsQty} возвр.`,
         change: null,
         isNegative: false,
       },
       {
-        title: 'Продано на WB',
-        value: `${Math.round(weeklyMetrics.totalSales).toLocaleString('ru-RU')} сом`,
-        subtitle: 'По розничной цене',
+        title: 'К перечислению',
+        value: `${Math.round(sellerPayout).toLocaleString('ru-RU')} сом`,
+        subtitle: 'После комиссии WB и эквайринга',
         change: null,
         isNegative: false,
       },
       {
-        title: 'Удержания WB',
-        value: `${Math.round(wbDeductions).toLocaleString('ru-RU')} сом`,
-        subtitle: 'Все расходы на площадке',
+        title: 'Оплата на Р/С',
+        value: `${Math.round(totalToReceive).toLocaleString('ru-RU')} сом`,
+        subtitle: `${revenue > 0 ? ((totalToReceive / revenue) * 100).toFixed(1) : 0}% от выручки`,
         change: null,
-        isNegative: true,
+        isNegative: totalToReceive < 0,
       },
       {
         title: 'Комиссия WB',
-        value: `${Math.round(wbCommission).toLocaleString('ru-RU')} сом`,
-        subtitle: `${revenue > 0 ? ((wbCommission / revenue) * 100).toFixed(1) : 0}% от выручки`,
+        value: `${Math.round(wbCommission - acquiring).toLocaleString('ru-RU')} сом`,
+        subtitle: `${revenue > 0 ? (((wbCommission - acquiring) / revenue) * 100).toFixed(1) : 0}% от выручки`,
+        change: null,
+        isNegative: false,
+      },
+      {
+        title: 'Эквайринг',
+        value: `${Math.round(acquiring).toLocaleString('ru-RU')} сом`,
+        subtitle: `${revenue > 0 ? ((acquiring / revenue) * 100).toFixed(1) : 0}% от выручки`,
         change: null,
         isNegative: false,
       },
       {
         title: 'Логистика',
-        value: `${Math.round(weeklyMetrics.totalLogistics).toLocaleString('ru-RU')} сом`,
-        subtitle: `${revenue > 0 ? ((weeklyMetrics.totalLogistics / revenue) * 100).toFixed(1) : 0}% от выручки`,
-        badge: `${detailedStats.totalDeliveries} доставок`,
+        value: `${Math.round(delivery).toLocaleString('ru-RU')} сом`,
+        subtitle: `${detailedStats.totalDeliveries} доставок`,
         change: null,
         isNegative: false,
       },
       {
-        title: 'Прочие расходы',
-        value: `${Math.round(weeklyMetrics.totalStorage + weeklyMetrics.totalFines).toLocaleString('ru-RU')} сом`,
-        subtitle: 'Штрафы, хранение, реклама',
+        title: 'Хранение',
+        value: `${Math.round(storage).toLocaleString('ru-RU')} сом`,
+        subtitle: 'Из еженедельного отчёта',
         change: null,
         isNegative: true,
       },
       {
-        title: 'Бизнес-расходы',
-        value: '0 сом',
-        subtitle: 'Внесённые вручную',
+        title: 'Штрафы',
+        value: `${Math.round(fines).toLocaleString('ru-RU')} сом`,
+        subtitle: 'Из еженедельного отчёта',
         change: null,
-        isNegative: false,
+        isNegative: true,
+      },
+      {
+        title: 'Приёмка',
+        value: `${Math.round(acceptance).toLocaleString('ru-RU')} сом`,
+        subtitle: 'Из еженедельного отчёта',
+        change: null,
+        isNegative: true,
+      },
+      {
+        title: 'Удержания',
+        value: `${Math.round(otherDeductions).toLocaleString('ru-RU')} сом`,
+        subtitle: 'Прочие удержания площадки',
+        change: null,
+        isNegative: true,
       },
       {
         title: 'Себестоимость',
-        value: `${Math.round(costPriceData.totalCostPrice).toLocaleString('ru-RU')} сом`,
-        subtitle: `${revenue > 0 ? ((costPriceData.totalCostPrice / revenue) * 100).toFixed(1) : 0}% от выручки`,
+        value: `${Math.round(totalCostPrice).toLocaleString('ru-RU')} сом`,
+        subtitle: `${revenue > 0 ? ((totalCostPrice / revenue) * 100).toFixed(1) : 0}% от выручки`,
         change: null,
         isNegative: false,
       },
       {
         title: 'Налог',
-        value: '0 сом',
-        subtitle: '2%',
+        value: `${Math.round(tax).toLocaleString('ru-RU')} сом`,
+        subtitle: taxRate > 0 ? `УСН ${(taxRate * 100).toFixed(0)}% от Р/С` : 'Не задан',
         change: null,
-        isNegative: false,
+        isNegative: true,
+      },
+      {
+        title: 'Внешние расходы',
+        value: `${Math.round(externalExpenses).toLocaleString('ru-RU')} сом`,
+        subtitle: `${revenue > 0 ? ((externalExpenses / revenue) * 100).toFixed(1) : 0}% от выручки`,
+        change: null,
+        isNegative: true,
       },
       {
         title: 'Маржинальность',
@@ -380,7 +429,7 @@ export class ReportsUseCase {
   }
 
   async getOrganizationSummaryReport(dto: GetSummaryReportDto): Promise<SummaryReportResponse> {
-    const { organizationId, startDate, endDate } = dto;
+    const { organizationId, startDate, endDate, taxRate = 0 } = dto;
 
     const start = startDate ? new Date(startDate) : startOfMonth(new Date());
     const end = endDate ? new Date(endDate) : endOfMonth(new Date());
@@ -435,10 +484,9 @@ export class ReportsUseCase {
       const detail = detailsMap.get(key);
 
       return {
-        sales: detail?.salesCount || 0,
-        returns: detail?.returnsCount || 0,
+        sales: detail?.salesQty || 0,
+        returns: detail?.returnsQty || 0,
         deliveries: detail?.deliveries || 0,
-        returnQty: detail?.returnQty || 0,
       };
     });
 
@@ -448,29 +496,24 @@ export class ReportsUseCase {
       const cost = costsMap.get(key);
 
       if (!detail) {
-        return {
-          price: 0,
-          commission: 0,
-          transfer: 0,
-          delivery: 0,
-          cost: 0,
-          margin: 0,
-        };
+        return { price: 0, commission: 0, transfer: 0, delivery: 0, cost: 0, margin: 0 };
       }
 
+      // netQty = Количество продаж - Количество возврата (знаменатель средних)
+      // Деление вычисляется здесь т.к. требует cross-row данных из двух источников
+      const netQty = Math.max(detail.salesQty - detail.returnsQty, 1);
+
       return {
-        price: Math.round(detail.avgPrice),
-        commission: Math.round(detail.avgCommission),
-        transfer: Math.round(detail.avgPrice - detail.avgCommission),
-        delivery: detail.salesCount > 0 ? Math.round(detail.totalDeliveryCost / detail.salesCount) : 0,
-        cost: Math.round(cost?.avgCost || 0),
-        margin: Math.round(
-          detail.avgPrice - detail.avgCommission - detail.totalDeliveryCost / (detail.salesCount || 1),
-        ),
+        price: Math.round(detail.revenue / netQty),
+        commission: Math.round(detail.wbCommission / netQty),
+        transfer: Math.round(detail.sellerPayout / netQty),
+        delivery: Math.round(detail.deliveryCost / netQty),
+        cost: Math.round((cost?.totalCost || 0) / netQty),
+        margin: 0,
       };
     });
 
-    const financeData = weeks.map((week) => {
+    const financeData = await Promise.all(weeks.map(async (week) => {
       const key = format(week.start, 'yyyy-MM-dd');
       const summary = summariesMap.get(key);
       const detail = detailsMap.get(key);
@@ -481,40 +524,61 @@ export class ReportsUseCase {
           revenue: 0,
           commission: 0,
           commissionPct: '-',
+          acquiring: 0,
           transfer: 0,
           deliveryCost: 0,
+          deliveryCostForward: 0,
+          deliveryCostReturn: 0,
           fines: 0,
           acceptance: 0,
           deductions: 0,
           storage: 0,
           totalPay: 0,
           cost: 0,
+          tax: 0,
+          externalExpenses: 0,
           profit: 0,
         };
       }
 
-      const revenue = detail?.totalRevenue || 0;
-      const totalSales = summary?.totalSales || 0;
-      const totalToPay = summary?.totalToPay || 0;
-      const totalLogistics = summary?.totalLogistics || 0;
-      const wbCommission = totalSales - totalToPay - totalLogistics;
+      const rev = detail?.revenue || 0;
+      const payout = detail?.sellerPayout || 0;
+      const commission = detail?.wbCommission || 0;
+      const acquiring = detail?.acquiring || 0;
+      const delCost = detail?.deliveryCost || 0;
+      const delCostForward = detail?.deliveryCostForward || 0;
+      const delCostReturn = detail?.deliveryCostReturn || 0;
+      const storage = summary?.totalStorage || 0;
+      const fines = summary?.totalFines || 0;
+      const acceptance = summary?.totalAcceptanceCost || 0;
+      const deductions = summary?.otherCharges || 0;
       const totalCost = cost?.totalCost || 0;
+      const extExp = await this.#otherExpensesRepository.getTotalForPeriod(organizationId, week.start, week.end);
+      // Оплата на Р/С = К перечислению − логистика − хранение − штрафы − приёмка − удержания
+      const totalPay = payout - delCost - fines - acceptance - deductions - storage;
+      const tax = totalPay * taxRate;
+      const profit = totalPay - tax - totalCost - extExp;
 
       return {
-        revenue: Math.round(revenue),
-        commission: Math.round(wbCommission),
-        commissionPct: revenue > 0 ? `${((wbCommission / revenue) * 100).toFixed(1)}%` : '-',
-        transfer: Math.round(totalToPay),
-        deliveryCost: Math.round(totalLogistics),
-        fines: Math.round(summary?.totalFines || 0),
-        acceptance: Math.round(summary?.totalAcceptanceCost || 0),
-        deductions: 0,
-        storage: Math.round(summary?.totalStorage || 0),
-        totalPay: Math.round(totalToPay),
+        revenue: Math.round(rev),
+        commission: Math.round(commission - acquiring),
+        commissionPct: rev > 0 ? `${(((commission - acquiring) / rev) * 100).toFixed(1)}%` : '-',
+        acquiring: Math.round(acquiring),
+        transfer: Math.round(payout),
+        deliveryCost: Math.round(delCost),
+        deliveryCostForward: Math.round(delCostForward),
+        deliveryCostReturn: Math.round(delCostReturn),
+        fines: Math.round(fines),
+        acceptance: Math.round(acceptance),
+        deductions: Math.round(deductions),
+        storage: Math.round(storage),
+        totalPay: Math.round(totalPay),
         cost: Math.round(totalCost),
-        profit: Math.round(totalToPay - totalCost),
+        tax: Math.round(tax),
+        externalExpenses: Math.round(extExp),
+        profit: Math.round(profit),
       };
-    });
+    }));
 
     const corrections = weeks.map(() => ({
       acquiring: '',
@@ -535,9 +599,6 @@ export class ReportsUseCase {
     };
   }
 
-  /**
-   * Получить детализированный отчет
-   */
   async getDetailedReport(dto: GetDetailedReportDto): Promise<DetailedReportResponse> {
     const {
       organizationId,
@@ -579,8 +640,8 @@ export class ReportsUseCase {
       orderDate: item.orderDate ? format(new Date(item.orderDate), 'yyyy-MM-dd') : null,
       saleDate: item.saleDate ? format(new Date(item.saleDate), 'yyyy-MM-dd') : null,
       quantity: item.quantity,
-      saleAmount: Number(item.retailPriceWithDiscount) * Number(item.quantity),
-      commission: Number(item.wbRewardWithoutVat),
+      saleAmount: Number(item.wbSaleAmount),
+      commission: Number(item.wbSaleAmount) - Number(item.sellerPayout),
       priceWithDiscount: Number(item.retailPriceWithDiscount),
       sppDiscount: Number(item.sppDiscountPercent),
       kvvPercent: Number(item.kvvPercent),
@@ -604,5 +665,32 @@ export class ReportsUseCase {
 
   async getDetailedReportFilterOptions(organizationId: number) {
     return await this.#financeRepository.getFilterOptions(organizationId);
+  }
+
+  /**
+   * Диагностика: парсит Excel и возвращает список колонок + первые 3 строки.
+   * Полезно для отладки несовпадения заголовков с WbFinanceColumns.
+   */
+  async previewDetailedReport(file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Excel file not provided');
+    }
+
+    const columnNames = getExcelColumnNames(file.buffer);
+    const rows = parseExcel<WbFinanceRow>(file.buffer);
+    const preview = rows.slice(0, 3);
+
+    const expectedColumns = Object.values(WbFinanceColumns);
+    const missingColumns = expectedColumns.filter((col) => !columnNames.includes(col));
+    const extraColumns = columnNames.filter((col) => !expectedColumns.includes(col as WbFinanceColumns));
+
+    return {
+      totalRows: rows.length,
+      columnCount: columnNames.length,
+      columns: columnNames,
+      missingExpectedColumns: missingColumns,
+      unexpectedColumns: extraColumns,
+      preview,
+    };
   }
 }

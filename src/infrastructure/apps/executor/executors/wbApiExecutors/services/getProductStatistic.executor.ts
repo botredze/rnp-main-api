@@ -1,24 +1,21 @@
 import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecutor';
 import axios, { AxiosInstance } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 import { DateTime } from 'luxon';
-import fs from 'fs';
-import AdmZip from 'adm-zip';
-import { StatisticItem } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/statistic.dto';
+import { SalesFunnelHistoryItem } from '@/infrastructure/apps/executor/executors/wbApiExecutors/types/statistic.dto';
 import { ProductRepository } from '@/infrastructure/core/typeOrm/repositories/product.repository';
 import { HistoryRepository } from '@/infrastructure/core/typeOrm/repositories/history.repository';
 import { HistoryModel } from '@/infrastructure/core/typeOrm/models/history.model';
-import * as path from 'node:path';
-import Papa from 'papaparse';
+
+const NM_IDS_CHUNK_SIZE = 20; // API limit: max 20 nmIds per request
+const RATE_LIMIT_DELAY_MS = 22000; // 3 req/min → 22 сек между запросами
 
 export class GetProductStatisticExecutor extends TaskExecutor {
   readonly #header = {
     'Content-Type': 'application/json',
   };
 
-  readonly #createReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads';
-  readonly #checkStatusReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads';
-  readonly #downloadReport = 'https://seller-analytics-api.wildberries.ru/api/v2/nm-report/downloads/file';
+  readonly #baseUrl =
+    'https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products/history';
 
   #axiosService: AxiosInstance;
 
@@ -41,154 +38,131 @@ export class GetProductStatisticExecutor extends TaskExecutor {
     });
   }
 
-  async downloadAndParseReport(downloadId: string, saveDir: string): Promise<Array<StatisticItem>> {
-    try {
-      if (!fs.existsSync(saveDir)) {
-        fs.mkdirSync(saveDir, { recursive: true });
-      }
-
-      const savePath = path.resolve(saveDir, `${downloadId}.zip`);
-
-      const response = await this.#axiosService.get(`${this.#downloadReport}/${downloadId}`, {
-        responseType: 'arraybuffer',
-      });
-
-      fs.writeFileSync(savePath, response.data);
-
-      const zip = new AdmZip(savePath);
-      const zipEntries = zip.getEntries();
-
-      if (!zipEntries.length) {
-        throw new Error('ZIP-файл пустой');
-      }
-
-      const csvEntry = zipEntries.find((e) => e.entryName.endsWith('.csv'));
-
-      if (!csvEntry) {
-        throw new Error('CSV-файл в ZIP не найден');
-      }
-
-      const csvBuffer = csvEntry.getData();
-      const csvString = csvBuffer.toString('utf-8');
-
-      const parsed = Papa.parse(csvString, {
-        header: true,
-        skipEmptyLines: true,
-      });
-
-      const data: Array<StatisticItem> = parsed.data as Array<StatisticItem>;
-      console.log('Парсинг CSV завершён, записей:', data.length);
-
-      return data;
-    } catch (err) {
-      console.error('Ошибка при скачивании/распаковке/парсинге отчёта:', err);
-      throw err;
-    }
-  }
-  async waitForReport(idReport: string) {
-    const params = {
-      'filter[downloadIds][]': idReport,
-    };
-
-    while (true) {
-      try {
-        const response = await this.#axiosService.get(`${this.#checkStatusReport}`, { params });
-
-        const report = response.data.data.find((item) => item.id === idReport);
-
-        if (!report) {
-          console.warn(`Отчёт с id ${idReport} не найден в ответе`);
-          await new Promise((resolve) => setTimeout(resolve, 20000));
-          continue;
-        }
-
-        if (report.status === 'SUCCESS') {
-          return 'SUCCESS';
-        } else if (report.status === 'FAILED') {
-          return 'FAILED';
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 20000));
-      } catch (err) {
-        console.error('Ошибка при проверке статуса отчёта:', err);
-        break;
-      }
-    }
-  }
-
-  async execute(apiKey: string, organizationName: string): Promise<void> {
+  async execute(apiKey: string, organizationName: string, organizationId: number): Promise<void> {
     this.#initAxios(apiKey);
 
     try {
-      const idReport = uuidv4();
+      // Получаем nmID всех активных продуктов организации
+      const products = await this.#productRepository.findMany({
+        where: { organizationId },
+      });
 
-      const endDate = DateTime.now().minus({ day: 1 }); // сегодня
-      const startDate = endDate.minus({ months: 3 }); // 3 месяца назад
+      if (!products.length) {
+        console.warn(`[ProductStat] Нет продуктов для org=${organizationName}, пропускаем`);
+        return;
+      }
 
-      const reportParams = {
-        id: idReport,
-        reportType: 'DETAIL_HISTORY_REPORT',
-        userReportName: `${organizationName}-${idReport}`,
-        params: {
-          startDate: startDate.toISODate(),
-          endDate: endDate.toISODate(),
-        },
-        aggregationLevel: 'day',
-        skipDeletedNm: false,
-      };
+      const allNmIds = products.map((p) => p.nmID);
+      console.log(`[ProductStat] Продуктов в организации: ${allNmIds.length}`);
 
-      console.log(reportParams, 'reportParams');
-      const createReportReposonse = await this.#axiosService.post(this.#createReport, reportParams);
+      const endDate = DateTime.now().minus({ days: 1 });
+      const startDate = endDate.minus({ days: 6 }); // max 7 дней для этого endpoint
 
-      if (createReportReposonse.status === 200) {
-        const waitReportStatus = await this.waitForReport(idReport);
-        if (waitReportStatus === 'SUCCESS') {
-          const statisticData = await this.downloadAndParseReport(
-            idReport,
-            `wb-reports/${reportParams.userReportName}.zip`,
-          );
+      // Разбиваем на чанки по 20 (API limit)
+      const chunks: number[][] = [];
+      for (let i = 0; i < allNmIds.length; i += NM_IDS_CHUNK_SIZE) {
+        chunks.push(allNmIds.slice(i, i + NM_IDS_CHUNK_SIZE));
+      }
 
-          for (const statistic of statisticData) {
-            const product = await this.#productRepository.findOne({ where: { nmID: statistic.nmID } });
+      console.log(
+        `[ProductStat] Запрос статистики: от ${startDate.toISODate()} до ${endDate.toISODate()}, org=${organizationName}, чанков=${chunks.length}`,
+      );
 
-            if (!product) {
-              throw Error('Product not found');
-            }
+      const allItems: SalesFunnelHistoryItem[] = [];
 
-            const saveStatisticPayload = new HistoryModel({
-              date: new Date(statistic.dt),
-              openCardCount: statistic.openCardCount,
-              nmId: statistic.nmID,
-              addToCardCount: statistic.addToCartCount,
-              ordersCount: statistic.ordersCount,
-              orderSumRub: statistic.ordersSumRub,
-              buyOutCount: statistic.buyoutsCount,
-              buyOutSumRub: statistic.buyoutsSumRub,
-              buyOutPercent: statistic.buyoutPercent,
-              addToCardConversion: statistic.addToCartConversion,
-              cardToOrderConversion: statistic.cartToOrderConversion,
-              addToWishlist: statistic.addToWishlist,
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const requestBody = {
+          selectedPeriod: {
+            start: startDate.toISODate(),
+            end: endDate.toISODate(),
+          },
+          nmIds: chunk,
+          skipDeletedNm: false,
+          aggregationLevel: 'day',
+        };
+
+        const response = await this.#axiosService.post<SalesFunnelHistoryItem[]>(
+          this.#baseUrl,
+          requestBody,
+        );
+
+        if (response.status !== 200) {
+          console.warn(`[ProductStat] Неожиданный статус чанка ${i + 1}: ${response.status}`);
+          continue;
+        }
+
+        allItems.push(...(response.data ?? []));
+        console.log(`[ProductStat] Чанк ${i + 1}/${chunks.length}: получено ${response.data?.length ?? 0} артикулов`);
+
+        // Rate limit: 3 req/min — ждём между запросами
+        if (i < chunks.length - 1) {
+          await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
+        }
+      }
+
+      console.log(`[ProductStat] Всего получено артикулов: ${allItems.length}`);
+
+      let saved = 0,
+        updated = 0,
+        skipped = 0;
+
+      for (const item of allItems) {
+        const nmId = item.product?.nmId;
+
+        if (!nmId) continue;
+
+        const product = await this.#productRepository.findOne({
+          where: { nmID: nmId, organizationId },
+        });
+
+        if (!product) {
+          skipped++;
+          continue;
+        }
+
+        for (const day of item.history ?? []) {
+          const date = new Date(day.date);
+
+          const payload = new HistoryModel({
+            date,
+            nmId,
+            openCardCount: day.openCount ?? 0,
+            addToCardCount: day.cartCount ?? 0,
+            ordersCount: day.orderCount ?? 0,
+            orderSumRub: day.orderSum ?? 0,
+            buyOutCount: day.buyoutCount ?? 0,
+            buyOutSumRub: day.buyoutSum ?? 0,
+            buyOutPercent: day.buyoutPercent ?? 0,
+            addToCardConversion: day.addToCartConversion ?? 0,
+            cardToOrderConversion: day.cartToOrderConversion ?? 0,
+            addToWishlist: day.addToWishlistCount ?? 0,
+          });
+
+          const existing = await this.#productStatsRepository.findOne({
+            where: { date, nmId },
+          });
+
+          if (existing) {
+            await this.#productStatsRepository.updateById(existing.id, payload);
+            updated++;
+          } else {
+            await this.#productStatsRepository.create({
+              ...payload,
+              productId: product.id,
             });
-
-            const existingStatisticItem = await this.#productStatsRepository.findOne({
-              where: { date: new Date(statistic.dt), nmId: statistic.nmID },
-            });
-
-            if (existingStatisticItem) {
-              await this.#productStatsRepository.updateById(existingStatisticItem.id, saveStatisticPayload);
-            } else {
-              await this.#productStatsRepository.create({
-                ...saveStatisticPayload,
-                productId: product.id,
-              });
-            }
+            saved++;
           }
         }
       }
 
-      console.log('Воронка продаж обновлена');
+      if (skipped > 0) {
+        console.warn(`[ProductStat] Пропущено артикулов (не найдены в орг): ${skipped}`);
+      }
+
+      console.log(`[ProductStat] Готово: создано=${saved}, обновлено=${updated}, пропущено=${skipped}`);
     } catch (error) {
-      console.log(error, 'error');
+      console.error('[ProductStat] Ошибка:', error?.response?.data || error?.message || error);
     }
   }
 }

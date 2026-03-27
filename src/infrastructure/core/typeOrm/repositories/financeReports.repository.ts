@@ -2,29 +2,34 @@ import { TypeOrmRepository } from '@/infrastructure/core/typeOrm/repositories/ty
 import { FinanceReportsModel } from '@/infrastructure/core/typeOrm/models/financeReports.model';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { format } from 'date-fns';
 
 export interface DetailedSalesStats {
-  totalSalesCount: number;
-  totalReturnsCount: number;
+  salesQty: number;
+  returnsQty: number;
   totalDeliveries: number;
-  totalReturnQty: number;
-  totalRevenue: number;
-  totalDeliveryCost: number;
-  avgRetailPrice: number;
-  avgCommission: number;
+  revenue: number;
+  sellerPayout: number;
+  wbCommission: number;
+  acquiring: number;
+  deliveryCost: number;
+  deliveryCostForward: number;
+  deliveryCostReturn: number;
 }
 
 export interface WeeklyDetailedStats {
   weekStart: Date;
   weekEnd: Date;
-  salesCount: number;
-  returnsCount: number;
+  salesQty: number;
+  returnsQty: number;
   deliveries: number;
-  returnQty: number;
-  avgPrice: number;
-  avgCommission: number;
-  totalRevenue: number;
-  totalDeliveryCost: number;
+  revenue: number;
+  sellerPayout: number;
+  wbCommission: number;
+  acquiring: number;
+  deliveryCost: number;
+  deliveryCostForward: number;
+  deliveryCostReturn: number;
 }
 
 export interface DetailedReportFilters {
@@ -52,32 +57,45 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
   }): Promise<DetailedSalesStats> {
     const { organizationId, startDate, endDate } = params;
 
-    const result = await this.repository
-      .createQueryBuilder('report')
-      .leftJoin('report.product', 'product')
-      .select([
-        'COUNT(CASE WHEN report.documentType = \'Продажа\' THEN 1 END) as "totalSalesCount"',
-        'COUNT(CASE WHEN report.documentType = \'Возврат\' THEN 1 END) as "totalReturnsCount"',
-        'COALESCE(SUM(report.deliveryCount), 0) as "totalDeliveries"',
-        'COALESCE(SUM(report.returnCount), 0) as "totalReturnQty"',
-        'COALESCE(SUM(report.retailPriceWithDiscount * report.quantity), 0) as "totalRevenue"',
-        'COALESCE(SUM(report.deliveryServicesCost), 0) as "totalDeliveryCost"',
-        'COALESCE(AVG(report.retailPrice), 0) as "avgRetailPrice"',
-        'COALESCE(AVG(report.wbRewardWithoutVat), 0) as "avgCommission"',
-      ])
-      .where('product.organizationId = :organizationId', { organizationId })
-      .andWhere('report.saleDate BETWEEN :startDate AND :endDate', { startDate, endDate })
-      .getRawOne();
+    const result = await this.repository.query(
+      `
+      SELECT
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.quantity ELSE 0 END), 0)                                                   AS "salesQty",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.quantity ELSE 0 END), 0)                                                    AS "returnsQty",
+        COUNT(CASE WHEN fr.document_type = 'Логистика' THEN 1 END)                                                                              AS "totalDeliveries",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.wb_sale_amount ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.wb_sale_amount ELSE 0 END), 0)                                            AS "revenue",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.seller_payout ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.seller_payout ELSE 0 END), 0)                                             AS "sellerPayout",
+        (COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.wb_sale_amount ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.wb_sale_amount ELSE 0 END), 0)) -
+        (COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.seller_payout ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.seller_payout ELSE 0 END), 0))                                            AS "wbCommission",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.acquiring_fee ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.acquiring_fee ELSE 0 END), 0)                                             AS "acquiring",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Логистика' THEN fr.delivery_services_cost ELSE 0 END), 0)                                    AS "deliveryCost",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Логистика' AND (fr.return_count = 0 OR fr.return_count IS NULL) THEN fr.delivery_services_cost ELSE 0 END), 0) AS "deliveryCostForward",
+        COALESCE(SUM(CASE WHEN fr.document_type = 'Логистика' AND fr.return_count > 0 THEN fr.delivery_services_cost ELSE 0 END), 0)            AS "deliveryCostReturn"
+      FROM finance_reports fr
+      LEFT JOIN products p ON fr.product_id = p.id
+      WHERE p.organization_id = $1
+        AND fr.sale_date BETWEEN $2 AND $3
+      `,
+      [organizationId, startDate, endDate],
+    );
 
+    const r = result[0];
     return {
-      totalSalesCount: Number(result.totalSalesCount),
-      totalReturnsCount: Number(result.totalReturnsCount),
-      totalDeliveries: Number(result.totalDeliveries),
-      totalReturnQty: Number(result.totalReturnQty),
-      totalRevenue: Number(result.totalRevenue),
-      totalDeliveryCost: Number(result.totalDeliveryCost),
-      avgRetailPrice: Number(result.avgRetailPrice),
-      avgCommission: Number(result.avgCommission),
+      salesQty: Number(r.salesQty),
+      returnsQty: Number(r.returnsQty),
+      totalDeliveries: Number(r.totalDeliveries),
+      revenue: Number(r.revenue),
+      sellerPayout: Number(r.sellerPayout),
+      wbCommission: Number(r.wbCommission),
+      acquiring: Number(r.acquiring),
+      deliveryCost: Number(r.deliveryCost),
+      deliveryCostForward: Number(r.deliveryCostForward),
+      deliveryCostReturn: Number(r.deliveryCostReturn),
     };
   }
 
@@ -90,23 +108,33 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
   }): Promise<WeeklyDetailedStats[]> {
     const { organizationId, weeks } = params;
 
-    const queries = weeks.map((week, index) => {
+    const queries = weeks.map((week) => {
+      const startStr = format(week.start, 'yyyy-MM-dd');
+      const endStr = format(week.end, 'yyyy-MM-dd');
       return `
-        SELECT 
-          '${week.start.toISOString()}'::timestamp as "weekStart",
-          '${week.end.toISOString()}'::timestamp as "weekEnd",
-          COUNT(CASE WHEN report.document_type = 'Продажа' THEN 1 END) as "salesCount",
-          COUNT(CASE WHEN report.document_type = 'Возврат' THEN 1 END) as "returnsCount",
-          COALESCE(SUM(report.delivery_count), 0) as deliveries,
-          COALESCE(SUM(report.return_count), 0) as "returnQty",
-          COALESCE(AVG(report.retail_price), 0) as "avgPrice",
-          COALESCE(AVG(report.wb_reward_without_vat), 0) as "avgCommission",
-          COALESCE(SUM(report.retail_price_with_discount * report.quantity), 0) as "totalRevenue",
-          COALESCE(SUM(report.delivery_services_cost), 0) as "totalDeliveryCost"
-        FROM finance_reports report
-        LEFT JOIN products product ON report.product_id = product.id
-        WHERE product.organization_id = ${organizationId}
-          AND report.sale_date BETWEEN '${week.start.toISOString()}' AND '${week.end.toISOString()}'
+        SELECT
+          '${startStr}'::date                                                                                                                          AS "weekStart",
+          '${endStr}'::date                                                                                                                            AS "weekEnd",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.quantity ELSE 0 END), 0)                                                        AS "salesQty",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.quantity ELSE 0 END), 0)                                                        AS "returnsQty",
+          COUNT(CASE WHEN fr.document_type = 'Логистика' THEN 1 END)                                                                                  AS "deliveries",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.wb_sale_amount ELSE 0 END), 0) -
+            COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.wb_sale_amount ELSE 0 END), 0)                                                AS "revenue",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.seller_payout ELSE 0 END), 0) -
+            COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.seller_payout ELSE 0 END), 0)                                                 AS "sellerPayout",
+          (COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.wb_sale_amount ELSE 0 END), 0) -
+            COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.wb_sale_amount ELSE 0 END), 0)) -
+          (COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.seller_payout ELSE 0 END), 0) -
+            COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.seller_payout ELSE 0 END), 0))                                                AS "wbCommission",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Продажа' THEN fr.acquiring_fee ELSE 0 END), 0) -
+            COALESCE(SUM(CASE WHEN fr.document_type = 'Возврат' THEN fr.acquiring_fee ELSE 0 END), 0)                                                 AS "acquiring",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Логистика' THEN fr.delivery_services_cost ELSE 0 END), 0)                                        AS "deliveryCost",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Логистика' AND (fr.return_count = 0 OR fr.return_count IS NULL) THEN fr.delivery_services_cost ELSE 0 END), 0) AS "deliveryCostForward",
+          COALESCE(SUM(CASE WHEN fr.document_type = 'Логистика' AND fr.return_count > 0 THEN fr.delivery_services_cost ELSE 0 END), 0)                AS "deliveryCostReturn"
+        FROM finance_reports fr
+        LEFT JOIN products p ON fr.product_id = p.id
+        WHERE p.organization_id = ${organizationId}
+          AND fr.sale_date BETWEEN '${startStr}' AND '${endStr}'
       `;
     });
 
@@ -116,14 +144,16 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
     return results.map((r: any) => ({
       weekStart: r.weekStart,
       weekEnd: r.weekEnd,
-      salesCount: Number(r.salesCount),
-      returnsCount: Number(r.returnsCount),
+      salesQty: Number(r.salesQty),
+      returnsQty: Number(r.returnsQty),
       deliveries: Number(r.deliveries),
-      returnQty: Number(r.returnQty),
-      avgPrice: Number(r.avgPrice),
-      avgCommission: Number(r.avgCommission),
-      totalRevenue: Number(r.totalRevenue),
-      totalDeliveryCost: Number(r.totalDeliveryCost),
+      revenue: Number(r.revenue),
+      sellerPayout: Number(r.sellerPayout),
+      wbCommission: Number(r.wbCommission),
+      acquiring: Number(r.acquiring),
+      deliveryCost: Number(r.deliveryCost),
+      deliveryCostForward: Number(r.deliveryCostForward),
+      deliveryCostReturn: Number(r.deliveryCostReturn),
     }));
   }
 
@@ -198,19 +228,21 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
     const { organizationId, weeks } = params;
 
     const queries = weeks.map((week) => {
+      const startStr = format(week.start, 'yyyy-MM-dd');
+      const endStr = format(week.end, 'yyyy-MM-dd');
       return `
-        SELECT 
-          '${week.start.toISOString()}'::timestamp as "weekStart",
-          '${week.end.toISOString()}'::timestamp as "weekEnd",
+        SELECT
+          '${startStr}'::date as "weekStart",
+          '${endStr}'::date as "weekEnd",
           COALESCE(SUM(
-            CASE 
+            CASE
               WHEN cost.size IS NOT NULL THEN cost.cost_price * report.quantity
               WHEN product_cost.cost_price IS NOT NULL THEN product_cost.cost_price * report.quantity
               ELSE 0
             END
           ), 0) as "totalCost",
           COALESCE(AVG(
-            CASE 
+            CASE
               WHEN cost.size IS NOT NULL THEN cost.cost_price
               WHEN product_cost.cost_price IS NOT NULL THEN product_cost.cost_price
               ELSE 0
@@ -239,7 +271,7 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
           LIMIT 1
         ) product_cost ON cost.size IS NULL
         WHERE product.organization_id = ${organizationId}
-          AND report.sale_date BETWEEN '${week.start.toISOString()}' AND '${week.end.toISOString()}'
+          AND report.sale_date BETWEEN '${startStr}' AND '${endStr}'
       `;
     });
 
@@ -370,8 +402,7 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
       .where('product.organizationId = :organizationId', {
         organizationId: filters.organizationId,
       })
-      .andWhere('report.documentType IS NOT NULL')
-      .andWhere("report.documentType != ''");
+      .andWhere("report.documentType IN ('Продажа', 'Возврат')");
 
     if (filters.startDate && filters.endDate) {
       query = query.andWhere('report.saleDate BETWEEN :startDate AND :endDate', {
@@ -426,15 +457,22 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
       .createQueryBuilder('report')
       .leftJoin('report.product', 'product')
       .select([
-        'COUNT(CASE WHEN report.documentType = \'Продажа\' THEN 1 END) as "totalSales"',
-        'COUNT(CASE WHEN report.documentType = \'Возврат\' THEN 1 END) as "totalReturns"',
-        'COALESCE(SUM(report.retailPriceWithDiscount * report.quantity), 0) as "totalRevenue"',
-        'COALESCE(SUM(report.wbRewardWithoutVat), 0) as "totalCommission"',
-        'COALESCE(SUM(report.sellerPayout), 0) as "totalPayout"',
+        // Количество строк Продажа / Возврат
+        "COUNT(CASE WHEN report.documentType = 'Продажа' THEN 1 END) as \"totalSales\"",
+        "COUNT(CASE WHEN report.documentType = 'Возврат' THEN 1 END) as \"totalReturns\"",
+        // Выручка = wb_sale_amount(Продажа) - wb_sale_amount(Возврат)
+        "COALESCE(SUM(CASE WHEN report.documentType = 'Продажа' THEN report.wbSaleAmount ELSE 0 END), 0) - " +
+          "COALESCE(SUM(CASE WHEN report.documentType = 'Возврат' THEN report.wbSaleAmount ELSE 0 END), 0) as \"totalRevenue\"",
+        // К перечислению = seller_payout(Продажа) - seller_payout(Возврат)
+        "COALESCE(SUM(CASE WHEN report.documentType = 'Продажа' THEN report.sellerPayout ELSE 0 END), 0) - " +
+          "COALESCE(SUM(CASE WHEN report.documentType = 'Возврат' THEN report.sellerPayout ELSE 0 END), 0) as \"totalPayout\"",
+        // Комиссия WB = Выручка - К перечислению (вычисляется ниже в TypeScript из двух полей)
+        "0 as \"totalCommission\"",
       ])
       .where('product.organizationId = :organizationId', {
         organizationId: filters.organizationId,
-      });
+      })
+      .andWhere("report.documentType IN ('Продажа', 'Возврат')");
 
     if (filters.startDate && filters.endDate) {
       query = query.andWhere('report.saleDate BETWEEN :startDate AND :endDate', {
@@ -468,12 +506,15 @@ export class FinanceReportsRepository extends TypeOrmRepository<FinanceReportsMo
 
     const result = await query.getRawOne();
 
+    const revenue = Number(result.totalRevenue);
+    const payout = Number(result.totalPayout);
+
     return {
       totalSales: Number(result.totalSales),
       totalReturns: Number(result.totalReturns),
-      totalRevenue: Number(result.totalRevenue),
-      totalCommission: Number(result.totalCommission),
-      totalPayout: Number(result.totalPayout),
+      totalRevenue: revenue,
+      totalCommission: revenue - payout,
+      totalPayout: payout,
     };
   }
 

@@ -1,6 +1,7 @@
 import { TaskExecutor } from '@/infrastructure/apps/executor/facrory/taskExecutor';
 import { OrganizationRepository } from '@/infrastructure/core/typeOrm/repositories/organization.repository';
 import { OrganizationStatuses } from '@/infrastructure/core/typeOrm/models/organizations.model';
+import { In } from 'typeorm';
 import { GetProductsExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getProducts.executor';
 import { GetStocksExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStocks.executor';
 import { GetSalesExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getSales.executor';
@@ -24,10 +25,11 @@ import { StocksRepository } from '@/infrastructure/core/typeOrm/repositories/sto
 import { ConfigService } from '@nestjs/config';
 import { StockCountRepository } from '@/infrastructure/core/typeOrm/repositories/stockCount.repository';
 import { StockCountOnSideRepository } from '@/infrastructure/core/typeOrm/repositories/stockCountOnSide.repository';
-import { GetStockCountTodayExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockCountToday.executor';
+import { GetStockHistoryDailyExecutor } from '@/infrastructure/apps/executor/executors/wbApiExecutors/services/getStockHistoryDaily.executor';
 import { SchedulerRepository } from '@/infrastructure/core/typeOrm/repositories/scheduler.repository';
 
 export class WbControllerExecutor extends TaskExecutor {
+  readonly #orgId: number | null;
   readonly #configService: ConfigService;
   readonly #organizationRepository: OrganizationRepository;
   readonly #advertInfoRepository: AdvertInfoRepository;
@@ -55,7 +57,7 @@ export class WbControllerExecutor extends TaskExecutor {
   readonly #getProductStatistic: GetProductStatisticExecutor;
   readonly #getSalesExecutor: GetSalesExecutor;
   readonly #getOrdersExecutor: GetOrdersExecutor;
-  readonly #getStockOnSiteExecutor: GetStockCountTodayExecutor;
+  readonly #getStockHistoryDailyExecutor: GetStockHistoryDailyExecutor;
 
   constructor(
     organizationRepository: OrganizationRepository,
@@ -73,8 +75,10 @@ export class WbControllerExecutor extends TaskExecutor {
     stockReportRepository: StockCountRepository,
     stockOnSiteRepository: StockCountOnSideRepository,
     schedulerRepository: SchedulerRepository,
+    orgId: number | null = null,
   ) {
     super();
+    this.#orgId = orgId;
 
     // repositories
     this.#organizationRepository = organizationRepository;
@@ -120,46 +124,49 @@ export class WbControllerExecutor extends TaskExecutor {
     this.#getProductStatistic = new GetProductStatisticExecutor(this.#productRepository, this.#productStatsRepository);
     this.#getSalesExecutor = new GetSalesExecutor(this.#productRepository, this.#salesRepository);
     this.#getOrdersExecutor = new GetOrdersExecutor(this.#orderRepository, this.#productRepository);
-    this.#getStockOnSiteExecutor = new GetStockCountTodayExecutor(
+    this.#getStockHistoryDailyExecutor = new GetStockHistoryDailyExecutor(
       this.#productRepository,
-      this.#organizationRepository,
       this.#stockOnSiteRepository,
     );
   }
 
   async execute() {
+    const whereClause: any = { status: In([OrganizationStatuses.Inited, OrganizationStatuses.Active]) };
+
+    if (this.#orgId) {
+      whereClause.id = this.#orgId;
+    }
+
     const initialOrganizations = await this.#organizationRepository.findMany({
-      where: { status: OrganizationStatuses.Inited },
+      where: whereClause,
     });
 
-    console.log(initialOrganizations, 'initialOrganizations');
+    console.log(`[WbController] Найдено организаций: ${initialOrganizations.length}${this.#orgId ? ` (фильтр по orgId=${this.#orgId})` : ''}`);
 
     for (const organization of initialOrganizations) {
-      const { apiKey, id, organizationName } = organization;
+      const { apiKey, id, organizationName, status } = organization;
 
       if (apiKey && id) {
+        console.log(`[WbController] Обработка: "${organizationName}" (id=${id}, status=${status})`);
+
         await this.#getOrganizationInfoExecutor.execute(apiKey, id);
-        //    await this.#getStocksExecutor.execute(apiKey, id);
         await this.#getProductsExecutor.execute(apiKey, id);
-
-        // await this.#getSalesExecutor.execute(apiKey);
-        // await this.#getOrdersExecutor.execute(apiKey);
-
-        await this.#getProductStatistic.execute(apiKey, organizationName);
+        await this.#getSalesExecutor.execute(apiKey, id);
+        await this.#getOrdersExecutor.execute(apiKey, id);
+        await this.#getProductStatistic.execute(apiKey, organizationName, id);
         await this.#getAdvertisingListExecutor.execute(apiKey, id);
-        // await this.#getStockReportExecutor.execute(apiKey);
         await this.#getAdvertingHistoryExecutor.execute(apiKey, id);
         await this.#getAdvertisingPaymentHistoryExecutor.execute(apiKey);
-        await this.#getStockOnSiteExecutor.execute(apiKey);
+        await this.#getStockHistoryDailyExecutor.execute(apiKey, organizationName, id);
 
         await this.#organizationRepository.updateById(id, {
           status: OrganizationStatuses.Active,
         });
 
-        console.log(`Организация ${organizationName} успешно инициализирована`);
+        console.log(`[WbController] Организация "${organizationName}" успешно обновлена`);
       }
     }
 
-    console.log('Все данные обновлены');
+    console.log('[WbController] Все данные обновлены');
   }
 }

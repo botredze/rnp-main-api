@@ -7,9 +7,28 @@ export function parseExcel<T = Record<string, any>>(buffer: Buffer, sheetIndex =
   const sheetName = workbook.SheetNames[sheetIndex];
   const sheet = workbook.Sheets[sheetName];
 
-  return XLSX.utils.sheet_to_json<T>(sheet, {
+  const raw = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
     defval: null,
   });
+
+  // Нормализуем заголовки: убираем лишние пробелы и нормализуем unicode (WB иногда присылает колонки с лишними пробелами)
+  return raw.map((row) => {
+    const normalized: Record<string, any> = {};
+    for (const key of Object.keys(row)) {
+      const cleanKey = key.trim().replace(/\s+/g, ' ');
+      normalized[cleanKey] = row[key];
+    }
+    return normalized as T;
+  });
+}
+
+export function getExcelColumnNames(buffer: Buffer, sheetIndex = 0): string[] {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[sheetIndex];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: null });
+  if (rows.length === 0) return [];
+  return Object.keys(rows[0]);
 }
 
 export const toNumber = (v: unknown): number => (v === null || v === undefined || v === '' ? 0 : Number(v));
@@ -73,6 +92,7 @@ export function mapWbRowToFinanceEntity(row: WbFinanceRow, productId: number): P
 
     shk: String(row[WbFinanceColumns.SHK] ?? ''),
     saleType: String(row[WbFinanceColumns.SALE_TYPE] ?? ''),
+    srid: String(row[WbFinanceColumns.ASSEMBLY_TASK_NUMBER] ?? ''),
 
     productId,
   };

@@ -35,9 +35,8 @@ export class GetOrganizationInfoExecutor extends TaskExecutor {
     this.#initAxios(apiKey);
 
     try {
+      console.log(`[OrgInfo] Запрос информации об организации id=${id}`);
       const response = await this.#axiosService.get(this.#baseUrl);
-
-      console.log(response.data);
 
       if (response.status === 200) {
         const data: OrganizationInfoDto = response.data;
@@ -49,12 +48,12 @@ export class GetOrganizationInfoExecutor extends TaskExecutor {
         };
 
         await this.#organizationRepository.updateById(id, updateData);
-        console.log('Организация обновлена');
+        console.log(`[OrgInfo] Обновлено: name="${data.name}", tradeMark="${data.tradeMark}", sid="${data.sid}"`);
       } else {
         throw Error(`This error is ${response.status}`);
       }
     } catch (err) {
-      console.error('Ошибка при запросе:', err);
+      console.error('[OrgInfo] Ошибка:', err?.response?.data || err?.message || err);
     }
   }
 }

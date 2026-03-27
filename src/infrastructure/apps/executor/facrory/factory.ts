@@ -70,6 +70,7 @@ export class TaskExecutorFactory {
         this.stockCountRepository,
         this.stockOnSiteRepository,
         this.schedulerRepository,
+        orgId,
       );
     }
 

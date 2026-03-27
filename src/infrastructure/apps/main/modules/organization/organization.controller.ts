@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { OrganizationUseCase } from '@/useCase/controllers/organization/organization.useCase';
 import { Request } from 'express';
-import { CreateOrganizationDto, GetUserOrganizationsDto, UpdateOrganizationDto } from '@/shared/dtos/organization.dto';
+import { CreateOrganizationDto, GetUserOrganizationsDto, TriggerSyncDto, UpdateOrganizationDto } from '@/shared/dtos/organization.dto';
 
 @Controller('organization')
 export class OrganizationController {
@@ -57,5 +57,10 @@ export class OrganizationController {
   @Get('deactivate')
   async diactivateOrganization(@Query() query: GetUserOrganizationsDto) {
     return await this.#ogranizationUseCase.diactivateOrganization(query);
+  }
+
+  @Post('sync')
+  async triggerSync(@Body() body: TriggerSyncDto) {
+    return await this.#ogranizationUseCase.triggerSync(body.organizationId);
   }
 }

@@ -53,4 +53,9 @@ export class CronService {
       this.logger.warn(`Job ${name} не найден для удаления`);
     }
   }
+
+  async executeNow(name: string) {
+    await this.queueService.sendMessage(QueueName.tasks, name);
+    this.logger.warn(`Job ${name} запущен немедленно`);
+  }
 }

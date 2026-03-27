@@ -42,7 +42,49 @@ export class OrganizationUseCase {
       return [];
     }
 
-    return list;
+    const result = await Promise.all(
+      list.map(async (org) => {
+        const task = await this.#schedularRepository.findOne({
+          where: { name: `organization_init_executor:${org.id}` as any },
+        });
+
+        return {
+          ...org,
+          syncInfo: task
+            ? {
+                lastSyncTime: task.lastRunTime,
+                syncStatus: task.status,
+              }
+            : null,
+        };
+      }),
+    );
+
+    return result;
+  }
+
+  async triggerSync(organizationId: number) {
+    const org = await this.#organizationRepository.findOne({ where: { id: organizationId } });
+
+    if (!org) {
+      throw new BadRequestException('Организация не найдена');
+    }
+
+    const taskName = `organization_init_executor:${organizationId}`;
+    const task = await this.#schedularRepository.findOne({ where: { name: taskName as any } });
+
+    if (!task) {
+      throw new BadRequestException('Задача синхронизации не найдена для этой организации');
+    }
+
+    await this.#schedularRepository.updateById(task.id, {
+      lastRunTime: null,
+      status: 'created',
+    } as any);
+
+    this.#eventEmitter.emit('schedular.tasks.updated');
+
+    return { success: true, message: 'Синхронизация запущена' };
   }
 
   private async checkApiKeyExists(apiKey: string, excludeOrganizationId?: number): Promise<boolean> {
@@ -155,9 +197,9 @@ export class OrganizationUseCase {
 
     const result = await this.#organizationRepository.updateById(id, payload);
 
-    // 5. Пересоздание задачи инициализации (если API ключ изменился)
-    if (result && apiKey !== organization.apiKey) {
-      await this.#schedularRepository.delete({ name: `organization_init_executor:${organization.id}` });
+    // 5. Пересоздание задачи инициализации при любом обновлении
+    if (result) {
+      await this.#schedularRepository.delete({ name: `organization_init_executor:${organization.id}` } as any, false);
 
       const taskPayload = new SchedularTasksModel({
         name: `organization_init_executor:${organization.id}`,
@@ -186,6 +228,20 @@ export class OrganizationUseCase {
         isActive: true,
         status: OrganizationStatuses.Inited,
       });
+
+      if (result) {
+        await this.#schedularRepository.delete({ name: `organization_init_executor:${organizationId}` } as any, false);
+
+        const taskPayload = new SchedularTasksModel({
+          name: `organization_init_executor:${organizationId}`,
+          scheduleRule: '0 0 * * *',
+          status: 'active',
+          runAfter: 0,
+        });
+
+        await this.#schedularRepository.create(taskPayload);
+        this.#eventEmitter.emit('schedular.tasks.updated');
+      }
 
       return result;
     } else if (action === 'diactive') {

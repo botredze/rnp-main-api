@@ -63,6 +63,12 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
       });
 
       const ids = advertList.map((ad) => ad.advertId);
+      console.log(`[AdvertHistory] orgId=${organizationId}, активных кампаний: ${ids.length}`);
+
+      if (ids.length === 0) {
+        console.log(`[AdvertHistory] Нет активных кампаний, выход`);
+        return;
+      }
 
       // Разбить на пачки <= 50
       const chunkSize = 50;
@@ -73,11 +79,14 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
 
       const endDate = DateTime.now().toISODate();
       const beginDate = DateTime.now().minus({ days: 30 }).toISODate();
+      console.log(`[AdvertHistory] Период: ${beginDate} — ${endDate}, чанков: ${idChunks.length}`);
+
+      let totalDays = 0, totalSaved = 0, totalUpdated = 0;
 
       for (let i = 0; i < idChunks.length; i++) {
         const chunk = idChunks[i];
 
-        console.log(`Запрос ${i + 1}/${idChunks.length} — ${chunk.length} реклам`);
+        console.log(`[AdvertHistory] Запрос ${i + 1}/${idChunks.length} — ${chunk.length} реклам`);
 
         const response = await this.#axiosService.get(this.#baseUrl, {
           params: {
@@ -89,6 +98,7 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
 
         if (response.status === 200) {
           const advertStatsData: Array<AdvertStats> = response.data ?? [];
+          console.log(`[AdvertHistory] Получено кампаний в ответе: ${advertStatsData.length}`);
 
           for (const advertStats of advertStatsData) {
             for (const day of advertStats.days) {
@@ -123,10 +133,14 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
               if (existingStats) {
                 await this.#advertDayStatisticRepository.updateById(existingStats.id, dayPayload);
                 createdDayStats.id = existingStats.id;
+                totalUpdated++;
               } else {
                 const created = await this.#advertDayStatisticRepository.create(dayPayload);
                 createdDayStats.id = created.id;
+                totalSaved++;
               }
+
+              totalDays++;
 
               for (const app of day.apps) {
                 let appRecord = await this.#advertDayAppsRepository.findOne({
@@ -187,18 +201,20 @@ export class GetAdvertingHistoryExecutor extends TaskExecutor {
               }
             }
           }
+        } else {
+          console.warn(`[AdvertHistory] Неожиданный статус чанка ${i + 1}: ${response.status}`);
         }
 
         // ============ TIMEOUT 1 МИНУТА МЕЖДУ ЗАПРОСАМИ ============
         if (i < idChunks.length - 1) {
-          console.log('Ждём 60 секунд...');
+          console.log('[AdvertHistory] Ждём 60 секунд...');
           await new Promise((res) => setTimeout(res, 60_000));
         }
       }
 
-      console.log('Статистика рекламных компаний');
+      console.log(`[AdvertHistory] Готово: дней=${totalDays}, создано=${totalSaved}, обновлено=${totalUpdated}`);
     } catch (error) {
-      console.log(error, 'error');
+      console.error('[AdvertHistory] Ошибка:', error?.response?.data || error?.message || error);
     }
   }
 }

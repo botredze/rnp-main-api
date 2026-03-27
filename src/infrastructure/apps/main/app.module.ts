@@ -41,6 +41,7 @@ import { ExpensesArticlesModel } from '@/infrastructure/core/typeOrm/models/expe
 import { CostPriceModule } from '@/infrastructure/apps/main/modules/costPrice/costPrice.module';
 import { WeeklyFinanceReportModel } from '@/infrastructure/core/typeOrm/models/weeklyFinanceReport.model';
 import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/uploadedReports.model';
+import { OtherExpensesModule } from '@/infrastructure/apps/main/modules/otherExpenses/otherExpenses.module';
 
 @Module({
   imports: [
@@ -123,6 +124,7 @@ import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/upload
     UserModule,
     ReportsModule,
     CostPriceModule,
+    OtherExpensesModule,
   ],
   controllers: [],
   providers: [

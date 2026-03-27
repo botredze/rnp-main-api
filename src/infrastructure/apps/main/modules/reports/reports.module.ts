@@ -11,6 +11,8 @@ import { WeeklyFinanceReportRepository } from '@/infrastructure/core/typeOrm/rep
 import { WeeklyFinanceReportModel } from '@/infrastructure/core/typeOrm/models/weeklyFinanceReport.model';
 import { UploadedReportsRepository } from '@/infrastructure/core/typeOrm/repositories/uploadedReports.repository';
 import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/uploadedReports.model';
+import { OtherExpensesRepository } from '@/infrastructure/core/typeOrm/repositories/otherExpenses.repository';
+import { OtherExpensesModel } from '@/infrastructure/core/typeOrm/models/otherExpenses.model';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/upload
       FinanceReportReadyModel,
       WeeklyFinanceReportModel,
       UploadedReportModel,
+      OtherExpensesModel,
     ]),
   ],
   controllers: [ReportsController],
@@ -28,6 +31,7 @@ import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/upload
     FinanceReportsRepository,
     WeeklyFinanceReportRepository,
     UploadedReportsRepository,
+    OtherExpensesRepository,
 
     {
       provide: ReportsUseCase,
@@ -36,8 +40,9 @@ import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/upload
         financeRepository: FinanceReportsRepository,
         weeklyReportRepository: WeeklyFinanceReportRepository,
         uploadedReportsRepository: UploadedReportsRepository,
-      ) => new ReportsUseCase(productRepository, financeRepository, weeklyReportRepository, uploadedReportsRepository),
-      inject: [ProductRepository, FinanceReportsRepository, WeeklyFinanceReportRepository, UploadedReportsRepository],
+        otherExpensesRepository: OtherExpensesRepository,
+      ) => new ReportsUseCase(productRepository, financeRepository, weeklyReportRepository, uploadedReportsRepository, otherExpensesRepository),
+      inject: [ProductRepository, FinanceReportsRepository, WeeklyFinanceReportRepository, UploadedReportsRepository, OtherExpensesRepository],
     },
   ],
 })
