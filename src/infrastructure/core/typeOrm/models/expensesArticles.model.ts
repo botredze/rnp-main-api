@@ -21,6 +21,9 @@ export class ExpensesArticlesModel {
   @PrimaryGeneratedColumn({ name: 'id' })
   id?: number;
 
+  @Column({ name: 'organization_id' })
+  organizationId: number;
+
   @Column()
   name: string;
 
@@ -32,10 +35,7 @@ export class ExpensesArticlesModel {
   status: ExpensesArticlesStatus;
 
   @OneToMany(() => OtherExpensesModel, (otherExpenses) => otherExpenses.expenseArticle)
-  costPrices: Array<OtherExpensesModel>;
-
-  @Column({ type: 'date' })
-  date: Date;
+  expenses: Array<OtherExpensesModel>;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;

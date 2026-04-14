@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -18,11 +19,17 @@ export enum ProductCostPriceStatus {
 }
 
 export enum OperationType {
-  ONE_TIME = 'ONE_TIME', // разовая
-  PLANNED = 'PLANNED', // плановая
+  ONE_TIME = 'ONE_TIME',
+  PLANNED = 'PLANNED',
+}
+
+export enum PriceApplicationType {
+  PRODUCT = 'PRODUCT', // Для всего продукта
+  SIZE = 'SIZE', // Для конкретного размера
 }
 
 @Entity({ name: 'product_cost_prices' })
+@Index(['productId', 'size', 'date', 'status'], { unique: true, where: "status = 'ACTIVE'" })
 export class ProductCostPriceModel {
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
@@ -34,7 +41,15 @@ export class ProductCostPriceModel {
   @Column({ name: 'product_id' })
   productId: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({
+    type: 'enum',
+    enum: PriceApplicationType,
+    default: PriceApplicationType.PRODUCT,
+    name: 'application_type',
+  })
+  applicationType: PriceApplicationType;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, name: 'cost_price' })
   costPrice: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
@@ -47,6 +62,7 @@ export class ProductCostPriceModel {
     type: 'enum',
     enum: OperationType,
     default: OperationType.ONE_TIME,
+    name: 'operation_type',
   })
   operationType: OperationType;
 
@@ -67,13 +83,29 @@ export class ProductCostPriceModel {
   createdAt: Date;
 
   @BeforeInsert()
-  setTimestampsOnInsert() {
+  validateAndSetDefaults() {
+    if (this.applicationType === PriceApplicationType.SIZE && !this.size) {
+      throw new Error('Size must be provided when applicationType is SIZE');
+    }
+
+    if (this.applicationType === PriceApplicationType.PRODUCT && this.size) {
+      this.size = null;
+    }
+
     this.createdAt = new Date();
     this.updatedAt = new Date();
   }
 
   @BeforeUpdate()
-  setTimestampsOnUpdate() {
+  validateAndUpdate() {
+    if (this.applicationType === PriceApplicationType.SIZE && !this.size) {
+      throw new Error('Size must be provided when applicationType is SIZE');
+    }
+
+    if (this.applicationType === PriceApplicationType.PRODUCT && this.size) {
+      this.size = null;
+    }
+
     this.updatedAt = new Date();
   }
 

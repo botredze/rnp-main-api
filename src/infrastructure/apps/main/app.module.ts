@@ -38,6 +38,10 @@ import { FinanceReportReadyModel } from '@/infrastructure/core/typeOrm/models/fi
 import { ProductCostPriceModel } from '@/infrastructure/core/typeOrm/models/productCostPrice.model';
 import { OtherExpensesModel } from '@/infrastructure/core/typeOrm/models/otherExpenses.model';
 import { ExpensesArticlesModel } from '@/infrastructure/core/typeOrm/models/expensesArticles.model';
+import { CostPriceModule } from '@/infrastructure/apps/main/modules/costPrice/costPrice.module';
+import { WeeklyFinanceReportModel } from '@/infrastructure/core/typeOrm/models/weeklyFinanceReport.model';
+import { UploadedReportModel } from '@/infrastructure/core/typeOrm/models/uploadedReports.model';
+import { OtherExpensesModule } from '@/infrastructure/apps/main/modules/otherExpenses/otherExpenses.module';
 
 @Module({
   imports: [
@@ -94,6 +98,8 @@ import { ExpensesArticlesModel } from '@/infrastructure/core/typeOrm/models/expe
             ProductCostPriceModel,
             OtherExpensesModel,
             ExpensesArticlesModel,
+            WeeklyFinanceReportModel,
+            UploadedReportModel,
           ],
           synchronize: true,
           logging: dbDebug,
@@ -117,6 +123,8 @@ import { ExpensesArticlesModel } from '@/infrastructure/core/typeOrm/models/expe
     RnpStatisticModule,
     UserModule,
     ReportsModule,
+    CostPriceModule,
+    OtherExpensesModule,
   ],
   controllers: [],
   providers: [

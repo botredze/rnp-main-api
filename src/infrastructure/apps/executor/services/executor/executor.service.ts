@@ -20,6 +20,8 @@ export class ExecutorService {
   async onTaskCreated(taskName: TaskName) {
     const executor = this.taskExecutorFactory.create(taskName);
 
+    await this.repository.update({ name: taskName }, { status: TASK_STATUS.RUNNING });
+
     try {
       await executor.execute();
 

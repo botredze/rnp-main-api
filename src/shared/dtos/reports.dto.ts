@@ -9,7 +9,7 @@ export enum WbFinanceColumns {
   SIZE = 'Размер',
   BARCODE = 'Баркод',
 
-  DOCUMENT_TYPE = 'Тип документа',
+  DOCUMENT_TYPE = 'Обоснование для оплаты',
 
   ORDER_DATE = 'Дата заказа покупателем',
   SALE_DATE = 'Дата продажи',

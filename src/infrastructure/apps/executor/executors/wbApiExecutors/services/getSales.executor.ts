@@ -34,61 +34,75 @@ export class GetSalesExecutor extends TaskExecutor {
     });
   }
 
-  async execute(apiKey: string): Promise<void> {
+  async execute(apiKey: string, organizationId: number): Promise<void> {
     this.#initAxios(apiKey);
 
     try {
       const dateMinus90 = DateTime.now().minus({ days: 90 }).toFormat('yyyy-MM-dd');
+      console.log(`[Sales] Запрос продаж с ${dateMinus90}`);
 
       const response = await this.#axiosService.get(`${this.#baseUrl}?dateFrom=${dateMinus90}`);
 
-      const salesList: SalesDtoList = response.data;
+      if (response.status === 200) {
+        const salesList: SalesDtoList = response.data;
+        console.log(`[Sales] Получено продаж: ${salesList.length}`);
 
-      for (const sales of salesList) {
-        const product = await this.#productRepository.findOne({ where: { nmID: sales.nmId } });
+        let saved = 0, updated = 0, skipped = 0;
 
-        if (!product) {
-          throw Error('Product not found');
+        for (const sales of salesList) {
+          const product = await this.#productRepository.findOne({ where: { nmID: sales.nmId, organizationId } });
+
+          if (!product) {
+            console.warn(`[Sales] Товар не найден: nmId=${sales.nmId}, пропускаем`);
+            skipped++;
+            continue;
+          }
+
+          const existingSale = await this.#salesRepository.findOne({ where: { saleID: sales.saleID } });
+
+          const salePayload: DeepPartial<SalesModel> = {
+            date: new Date(sales.date),
+            lastChangeDate: new Date(sales.lastChangeDate),
+            nmId: sales.nmId.toString(),
+            isSupply: sales.isSupply,
+            isRealization: sales.isRealization,
+            totalPrice: sales.totalPrice,
+            discountPercent: sales.discountPercent,
+            spp: sales.spp,
+            forPay: sales.forPay,
+            paymentSaleAmount: sales.paymentSaleAmount,
+            finishedPrice: sales.finishedPrice,
+            priceWithDisc: sales.priceWithDisc,
+            saleID: sales.saleID,
+            isCansel: sales.saleID.startsWith('R') ? true : false,
+            sticker: sales.sticker,
+            gNumber: sales.gNumber,
+            srid: sales.srid,
+            supplierArticle: sales.supplierArticle,
+            warehouseName: sales.warehouseName,
+            warehouseType: sales.warehouseType,
+            countryName: sales.countryName,
+            regionName: sales.regionName,
+            barcode: sales.barcode,
+            incomeId: sales.incomeID,
+            productId: product.id,
+          };
+
+          if (existingSale) {
+            await this.#salesRepository.updateById(existingSale.id, salePayload);
+            updated++;
+          } else {
+            await this.#salesRepository.create(salePayload);
+            saved++;
+          }
         }
 
-        const existingSale = await this.#salesRepository.findOne({ where: { saleID: sales.saleID } });
-
-        const salePayload: DeepPartial<SalesModel> = {
-          date: new Date(sales.date),
-          lastChangeDate: new Date(sales.lastChangeDate),
-          nmId: sales.nmId.toString(),
-          isSupply: sales.isSupply,
-          isRealization: sales.isRealization,
-          totalPrice: sales.totalPrice,
-          discountPercent: sales.discountPercent,
-          spp: sales.spp,
-          forPay: sales.forPay,
-          paymentSaleAmount: sales.paymentSaleAmount,
-          finishedPrice: sales.finishedPrice,
-          priceWithDisc: sales.priceWithDisc,
-          saleID: sales.saleID,
-          isCansel: sales.saleID.startsWith('R') ? true : false,
-          sticker: sales.sticker,
-          gNumber: sales.gNumber,
-          srid: sales.srid,
-          supplierArticle: sales.supplierArticle,
-          warehouseName: sales.warehouseName,
-          warehouseType: sales.warehouseType,
-          countryName: sales.countryName,
-          regionName: sales.regionName,
-          barcode: sales.barcode,
-          incomeId: sales.incomeID,
-          productId: product.id,
-        };
-
-        if (existingSale) {
-          await this.#salesRepository.updateById(existingSale.id, salePayload);
-        } else {
-          await this.#salesRepository.create(salePayload);
-        }
+        console.log(`[Sales] Готово: создано=${saved}, обновлено=${updated}, пропущено=${skipped}`);
+      } else {
+        console.warn(`[Sales] Неожиданный статус: ${response.status}`);
       }
     } catch (error) {
-      console.log(error, 'error');
+      console.error('[Sales] Ошибка:', error?.response?.data || error?.message || error);
     }
   }
 }

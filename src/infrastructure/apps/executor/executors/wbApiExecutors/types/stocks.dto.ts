@@ -59,3 +59,19 @@ export interface ProductStockInfo {
   volume: number;
   warehouses: Array<WarehouseInfo>;
 }
+
+/**
+ * Строка CSV отчёта STOCK_HISTORY_DAILY_CSV.
+ * Статические поля + динамические столбцы-даты в формате "DD.MM.YYYY".
+ */
+export interface StockDailyCsvRow {
+  VendorCode: string;
+  Name: string;
+  NmID: string;        // в CSV строка, конвертируем в number
+  SubjectName: string;
+  BrandName: string;
+  SizeName: string;
+  ChrtID: string;
+  OfficeName: string;
+  [dateKey: string]: string; // динамические колонки: "01.01.2025", "02.01.2025" …
+}

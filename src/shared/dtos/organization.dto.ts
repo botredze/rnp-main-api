@@ -1,4 +1,4 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateOrganizationDto {
   @IsString()
@@ -7,8 +7,9 @@ export class CreateOrganizationDto {
   @IsString()
   apiKey: string;
 
+  @IsOptional()
   @IsNumber()
-  userId: number;
+  userId?: number;
 
   constructor(params: Partial<CreateOrganizationDto> = {}) {
     Object.assign(this, params);
@@ -31,4 +32,13 @@ export class GetUserOrganizationsDto {
 
 export class UpdateOrganizationDto extends CreateOrganizationDto {
   id: number;
+}
+
+export class TriggerSyncDto {
+  @IsNumber()
+  organizationId: number;
+
+  constructor(params: Partial<TriggerSyncDto> = {}) {
+    Object.assign(this, params);
+  }
 }

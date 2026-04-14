@@ -12,6 +12,7 @@ export enum TaskName {
 
 export const TASK_STATUS = {
   CREATED: 'created',
+  RUNNING: 'running',
   SUCCESS: 'success',
   ERROR: 'error',
 };

@@ -34,21 +34,27 @@ export class GetOrdersExecutor extends TaskExecutor {
   }
 
 
-  async execute(apiKey: string): Promise<void>{
+  async execute(apiKey: string, organizationId: number): Promise<void>{
     this.#initAxios(apiKey);
 
     try {
       const dateMinus90 = DateTime.now().minus({ days: 90 }).toFormat('yyyy-MM-dd');
+      console.log(`[Orders] Запрос заказов с ${dateMinus90}`);
 
       const response = await this.#axiosService.get(`${this.#baseUrl}?dateFrom=${dateMinus90}`);
 
       if(response.status === 200) {
         const ordersList: OrderDtoList = response.data;
+        console.log(`[Orders] Получено заказов: ${ordersList.length}`);
+
+        let saved = 0, updated = 0, skipped = 0;
 
         for(const order of ordersList) {
-          const product = await this.#productRepository.findOne({where: {nmID: order.nmId}})
+          const product = await this.#productRepository.findOne({where: {nmID: order.nmId, organizationId}})
           if(!product) {
-            throw Error('Product not found')
+            console.warn(`[Orders] Товар не найден: nmId=${order.nmId}, пропускаем`);
+            skipped++;
+            continue;
           }
 
           const savePayload: DeepPartial<OrderModel> = {
@@ -84,17 +90,23 @@ export class GetOrdersExecutor extends TaskExecutor {
           const existingOrder = await this.#orderRepository.findOne({where: {srid: order.srid}})
 
           if(existingOrder){
-            await this.#orderRepository.updateById(existingOrder.id, savePayload)
+            await this.#orderRepository.updateById(existingOrder.id, savePayload);
+            updated++;
           }else {
             await this.#orderRepository.create({
               ...savePayload,
               productId: product.id,
-            })
+            });
+            saved++;
           }
         }
-       }
+
+        console.log(`[Orders] Готово: создано=${saved}, обновлено=${updated}, пропущено=${skipped}`);
+      } else {
+        console.warn(`[Orders] Неожиданный статус: ${response.status}`);
+      }
     }catch (error) {
-      console.log(error, 'error');
+      console.error('[Orders] Ошибка:', error?.response?.data || error?.message || error);
     }
   }
 }
